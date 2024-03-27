@@ -1,0 +1,62 @@
+data_sources = [
+    [
+        "https://www.arboretum.ie/shop/products/plants-seeds-and-bulbs/alpines-and-rockery-plants",
+        "Alpine",
+    ],
+    [
+        "https://www.arboretum.ie/shop/products/plants-seeds-and-bulbs/bamboos-and-grasses/bamboo",
+        "Bamboo",
+    ],
+    [
+        "https://www.arboretum.ie/shop/products/plants-seeds-and-bulbs/bamboos-and-grasses/evergreen-grasses",
+        "Grasses & Ferns",
+    ],
+    [
+        "https://www.arboretum.ie/shop/products/plants-seeds-and-bulbs/bamboos-and-grasses/deciduous-grasses",
+        "Grasses & Ferns",
+    ],
+    [
+        "https://www.arboretum.ie/shop/products/plants-seeds-and-bulbs/climbers",
+        "Climber",
+    ],
+    [
+        "https://www.arboretum.ie/shop/products/plants-seeds-and-bulbs/shrubs-and-hedging/evergreen-shrubs",
+        "Shrub",
+    ],
+    [
+        "https://www.arboretum.ie/shop/products/plants-seeds-and-bulbs/shrubs-and-hedging/deciduous-shrubs",
+        "Shrub",
+    ],
+    [
+        "https://www.arboretum.ie/shop/products/plants-seeds-and-bulbs/shrubs-and-hedging/lavender",
+        "Shrub",
+    ],
+    [
+        "https://www.arboretum.ie/shop/products/plants-seeds-and-bulbs/shrubs-and-hedging/mature-hedging",
+        "Hedging",
+    ],
+    [
+        "https://www.arboretum.ie/shop/products/plants-seeds-and-bulbs/shrubs-and-hedging/bare-root-hedge",
+        "Hedging",
+    ],
+    [
+        "https://www.arboretum.ie/shop/products/plants-seeds-and-bulbs/shrubs-and-hedging/topiary",
+        "Topiary",
+    ],
+    [
+        "https://www.arboretum.ie/shop/products/plants-seeds-and-bulbs/perennials",
+        "Perennials",
+    ],
+    [
+        "https://www.arboretum.ie/shop/products/plants-seeds-and-bulbs/garden-roses",
+        "Rose",
+    ],
+    [
+        "https://www.arboretum.ie/shop/products/plants-seeds-and-bulbs/ferns",
+        "Grasses & Ferns",
+    ],
+    [
+        "https://www.arboretum.ie/shop/products/plants-seeds-and-bulbs/trees-and-specimen-plants",
+        "Trees",
+    ],
+]

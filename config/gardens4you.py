@@ -1,0 +1,38 @@
+data_sources = [
+    [
+        "https://www.gardens4you.ie/garden-plants/fruit/all-fruit-plants",
+        "Fruit",
+    ],
+    [
+        "https://www.gardens4you.ie/garden-plants/perennials/all-perennials/",
+        "Perennials",
+    ],
+    [
+        "https://www.gardens4you.ie/garden-plants/shrubs/all-shrubs",
+        "Shrubs",
+    ],
+    [
+        "https://www.gardens4you.ie/garden-plants/roses/all-roses",
+        "Rose",
+    ],
+    [
+        "https://www.gardens4you.ie/garden-plants/climbers",
+        "Climber",
+    ],
+    [
+        "https://www.gardens4you.ie/garden-plants/trees/all-trees",
+        "Trees",
+    ],
+    [
+        "https://www.gardens4you.ie/garden-plants/perennials/grasses/all-ornamental-grasses",
+        "Grasses & Ferns",
+    ],
+    [
+        "https://www.gardens4you.ie/garden-plants/hedges/all-hedges",
+        "Hedging",
+    ],
+    [
+        "https://www.gardens4you.ie/garden-plants/bedding-plants/all-bedding-plants",
+        "Bedding",
+    ],
+]
