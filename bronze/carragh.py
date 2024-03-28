@@ -6,7 +6,10 @@ import re
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import (
+    NoSuchElementException,
+    StaleElementReferenceException,
+)
 import importlib
 import time
 
@@ -93,7 +96,13 @@ def fetch_data_interactive(
         if option_value == "Choose an option" or option_value == "":
             continue
         else:
-            select.select_by_value(option_value)
+            try:
+                select.select_by_value(option_value)
+            except StaleElementReferenceException:
+                print(
+                    f"Failed to select {option_value}. The site has re-rendered. URL: {product_url}"
+                )
+                continue
 
             # Sleeping here instead of waiting. The data is stored in browser in a form, so no round trips are required.
             # Because of how prices are displayed, its hard to verify that the prices etc are ready for consumption
