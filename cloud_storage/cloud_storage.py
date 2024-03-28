@@ -25,6 +25,6 @@ def export_data_locally(table: list[dict]) -> None:
     table = df.to_arrow()
 
     source = df.select(pl.first("source")).item()
-    file_name = f"data\\{source}-{datetime.date.today().strftime('%Y-%m-%d')}.parquet"
+    file_name = f"data\\{source}\\{datetime.date.today().strftime('%Y-%m-%d')}.parquet"
     print(f"Storing data to file '{file_name}'")
     pq.write_table(table, file_name)
