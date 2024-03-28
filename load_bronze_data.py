@@ -27,9 +27,9 @@ def main(params):
             )
 
         case _:
-            # cloud_storage.export_data_locally(table=tullys.get_product_data())
-            # cloud_storage.export_data_locally(table=quickcrop.get_product_data())
-            # cloud_storage.export_data_locally(table=gardens4you.get_product_data())
+            cloud_storage.export_data_locally(table=tullys.get_product_data())
+            cloud_storage.export_data_locally(table=quickcrop.get_product_data())
+            cloud_storage.export_data_locally(table=gardens4you.get_product_data())
             cloud_storage.export_data_locally(
                 table=carragh.get_product_data(),
             )
