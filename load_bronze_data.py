@@ -1,6 +1,7 @@
 import argparse
 import cloud_storage
-from bronze import tullys, quickcrop, gardens4you, carragh, arboretum
+from bronze import tullys, quickcrop, gardens4you, carragh, arboretum, rhs_urls, rhs
+import polars as pl
 
 
 def main(params):
@@ -25,7 +26,17 @@ def main(params):
             cloud_storage.export_data_locally(
                 table=arboretum.get_product_data(),
             )
-
+        case "rhs":
+            # cloud_storage.export_data_locally(
+            #     table=rhs_urls.get_plant_urls(),
+            #     dated=False,
+            # )
+            cloud_storage.export_data_locally(
+                table=rhs.get_plants_detail(
+                    pl.read_parquet("data\\rhs_urls.parquet").to_dicts()
+                ),
+                dated=False,
+            )
         case _:
             cloud_storage.export_data_locally(
                 table=carragh.get_product_data(),
@@ -45,13 +56,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--site",
         help="Name of the site you would like to fetch data for.",
-        choices=[
-            "tullys",
-            "quickcrop",
-            "gardens4you",
-            "carragh",
-            "arboretum",
-        ],
+        choices=["tullys", "quickcrop", "gardens4you", "carragh", "arboretum", "rhs"],
     )
     args = parser.parse_args()
     main(args)

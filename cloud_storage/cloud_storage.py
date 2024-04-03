@@ -13,18 +13,24 @@ def add_defaults_to_fields(
         return df
 
 
-def export_data_locally(table: list[dict]) -> None:
+def export_data_locally(table: list[dict], dated: bool = True) -> None:
     # Easiest to use Polars to convert a list of dictionaries into a DF/Table
     df = pl.DataFrame(table)
-
-    df = add_defaults_to_fields(df, field_name="product_code", default_value=None)
-    df = add_defaults_to_fields(df, field_name="quantity", default_value=1)
-    df = add_defaults_to_fields(
-        df, field_name="input_date", default_value=datetime.date.today()
-    )
-    table = df.to_arrow()
-
     source = df.select(pl.first("source")).item()
-    file_name = f"data\\{source}\\{datetime.date.today().strftime('%Y-%m-%d')}.parquet"
+
+    if dated:
+        df = add_defaults_to_fields(df, field_name="product_code", default_value=None)
+        df = add_defaults_to_fields(df, field_name="quantity", default_value=1)
+        df = add_defaults_to_fields(
+            df, field_name="input_date", default_value=datetime.date.today()
+        )
+
+        file_name = (
+            f"data\\{source}\\{datetime.date.today().strftime('%Y-%m-%d')}.parquet"
+        )
+    else:
+        file_name = f"data\\{source}.parquet"
+
+    table = df.to_arrow()
     print(f"Storing data to file '{file_name}'")
     pq.write_table(table, file_name)
