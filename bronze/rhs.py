@@ -130,12 +130,16 @@ def extract_detailed_plant_data(plant: dict, plant_content) -> dict:
                     # )
                     # print(df)
             elif panel_heading == "position":
-                sun_exposure = [
-                    se.text
-                    for se in plant_attributes_panel.find(
-                        "ul", class_="list-inline ng-star-inserted"
-                    ).find_all("li")
-                ]
+                try:
+                    sun_exposure = [
+                        se.text
+                        for se in plant_attributes_panel.find(
+                            "ul", class_="list-inline ng-star-inserted"
+                        ).find_all("li")
+                    ]
+                # Example with no exposure: https://www.rhs.org.uk/plants/239046/delphinium-lance-bearer/details
+                except AttributeError:
+                    sun_exposure = None
 
                 aspect = [
                     asp.text.replace("\x80\x93", "-")
@@ -242,7 +246,7 @@ def get_plants_detail(plants: list[dict]) -> None:
                 print(f"ERROR Could not fetch data for {plant["plant_url"]}")
                 continue
         df = pl.DataFrame([extract])
-        print(f"Storing data to file '{file_name}'")
+        # print(f"Storing data to file '{file_name}'")
 
         df.write_parquet(file_name)
 
