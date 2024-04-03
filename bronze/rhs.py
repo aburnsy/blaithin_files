@@ -216,7 +216,7 @@ def get_plants_detail(plants: list[dict]) -> None:
         plant_url = plant["plant_url"]
         file_name = f"data\\rhs\\{plant["id"]}.parquet"
         if os.path.isfile(file_name):
-            print(f"Skipping {plant_url}...")
+            # print(f"Skipping {plant_url}...")
             continue
         if (plant_page := session.get(plant_url)).status_code != 200:
             print(f"Given plant URL '{plant_url}' is incorrect.")
