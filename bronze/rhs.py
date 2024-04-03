@@ -1,6 +1,7 @@
 from requests_html import HTMLSession
 from bs4 import BeautifulSoup
 import polars as pl
+import pyarrow.parquet as pq
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
@@ -15,6 +16,7 @@ try:
     from .common import ScrollToBottom
 except ImportError:
     from common import ScrollToBottom
+import os
 
 
 def extract_detailed_plant_data(plant: dict, plant_content) -> dict:
@@ -205,12 +207,17 @@ def fetch_sample_plants() -> list[dict]:
     return pl.read_parquet("data\\rhs_urls.parquet").sample(1000).to_dicts()
 
 
-def get_plants_detail(plants: list[dict]) -> list[dict] | None:
-    detailed_plants = []
+def get_plants_detail(plants: list[dict]) -> None:
     session = HTMLSession()
     driver = selenium_setup()
+    if not os.path.exists("data\\rhs"):
+        os.mkdir("data\\rhs")
     for plant in plants:
         plant_url = plant["plant_url"]
+        file_name = f"data\\rhs\\{plant["id"]}.parquet"
+        if os.path.isfile(file_name):
+            print(f"Skipping {plant_url}...")
+            continue
         if (plant_page := session.get(plant_url)).status_code != 200:
             print(f"Given plant URL '{plant_url}' is incorrect.")
             continue
@@ -220,7 +227,6 @@ def get_plants_detail(plants: list[dict]) -> list[dict] | None:
                 plant_content=BeautifulSoup(plant_page.content, "html.parser"),
             )
             # print(f"Extracted {plant["plant_url"]}")
-            detailed_plants.append(extract)
         except Exception:
             try:
                 driver.get(plant_url)
@@ -231,12 +237,16 @@ def get_plants_detail(plants: list[dict]) -> list[dict] | None:
                 )
                 print(f"Extracted SELENIUM {plant["plant_url"]}")
 
-                detailed_plants.append(extract)
             except Exception:
                 traceback.print_exc()
                 print(f"ERROR Could not fetch data for {plant["plant_url"]}")
+                continue
+        df = pl.DataFrame([extract])
+        print(f"Storing data to file '{file_name}'")
+
+        df.write_parquet(file_name)
+
     driver.quit()
-    return detailed_plants
 
 
 def selenium_setup() -> webdriver:
