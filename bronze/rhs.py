@@ -189,7 +189,7 @@ def extract_detailed_plant_data(plant: dict, plant_content) -> dict:
             "is_rhs_award_winner": is_rhs_award_winner,
             "is_pollinator_plant": is_pollinator_plant,
             "height": height,
-            "spread": spread,
+            "spread": spread if "spread" in locals() else None,
             "time_to_ultimate_spread": time_to_ultimate_spread,
             "soils": soils,
             "moisture": moisture,
@@ -222,6 +222,7 @@ def get_plants_detail(plants: list[dict]) -> None:
         if os.path.isfile(file_name):
             # print(f"Skipping {plant_url}...")
             continue
+            # pass
         if (plant_page := session.get(plant_url)).status_code != 200:
             print(f"Given plant URL '{plant_url}' is incorrect.")
             continue
@@ -245,6 +246,7 @@ def get_plants_detail(plants: list[dict]) -> None:
                 traceback.print_exc()
                 print(f"ERROR Could not fetch data for {plant["plant_url"]}")
                 continue
+        print(extract)
         df = pl.DataFrame([extract])
         # print(f"Storing data to file '{file_name}'")
 
@@ -261,9 +263,9 @@ def selenium_setup() -> webdriver:
 # get_plants_detail(
 #     [
 #         {
-#             "plant_url": "https://www.rhs.org.uk/plants/47428/Astelia-chathamica/details",
-#             "id": 3,
-#             "botanical_name": "test",
+#             "plant_url": "https://www.rhs.org.uk/plants/82484/hosta-nicola/details",
+#             "id": 82484,
+#             "botanical_name": "hosta-nicola",
 #         },
 #     ]
 # )
