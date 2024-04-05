@@ -1,9 +1,9 @@
 import requests
 import json
 from bs4 import BeautifulSoup
-import re
 from string import ascii_lowercase
 import polars as pl
+import urllib.parse
 
 plant_type_mapping = {
     1: "Herbaceous Perennial",
@@ -75,13 +75,19 @@ def get_plant_urls(plant_types: list = range(1, 22)):
                         botanical_name_base.replace(" ", "-")
                         .replace("/", "-")
                         .replace("-&-", "-")
+                        .replace("-+-", "-")
+                        .replace("+-", "-")
                     )  # replace special characters with -
-                    botanical_name_html = botanical_name_html.replace(
-                        ".", ""
+                    botanical_name_html = (
+                        botanical_name_html.replace(".", "")
+                        .replace("&", "")
+                        .replace("'", "")
                     )  # replace certain characters with .
-                    botanical_name_html = re.sub(r"[']", "", botanical_name_html)
+                    ## Just parsing the url does not work, so we need to do both
+                    botanical_name_html = urllib.parse.quote(botanical_name_html)
 
                     plant_url = f"https://www.rhs.org.uk/plants/{id}/{botanical_name_html}/details"
+                    # print(plant_url)
                     temp_plants.append(
                         {
                             "id": id,
@@ -92,11 +98,9 @@ def get_plant_urls(plant_types: list = range(1, 22)):
                     )
                 offset += page_size
 
-            print(
-                f"Found {len(temp_plants)} products for '{plant_type_mapping[plant_type]}' plant type and letter '{keywords}'"
-            )
             plants.extend(temp_plants)
 
     plants = pl.DataFrame(plants)
     plants = plants.unique(maintain_order=True)
+    print(f"Found {len(plants)} products")
     return plants

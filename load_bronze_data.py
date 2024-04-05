@@ -26,24 +26,21 @@ def main(params):
             cloud_storage.export_data_locally(
                 table=arboretum.get_product_data(),
             )
-        case "rhs":
-            # cloud_storage.export_data_locally(
-            #     table=rhs_urls.get_plant_urls(),
-            #     dated=False,
-            # )
+        case "rhs_urls":
             cloud_storage.export_data_locally(
-                table=rhs.get_plants_detail(
-                    pl.read_parquet("data\\rhs_urls.parquet").to_dicts()
-                ),
+                table=rhs_urls.get_plant_urls(),
                 dated=False,
             )
+        case "rhs":
+            rhs.get_plants_detail(pl.read_parquet("data\\rhs_urls.parquet").to_dicts())
+
         case _:
             cloud_storage.export_data_locally(
-                table=rhs.get_plants_detail(
-                    pl.read_parquet("data\\rhs_urls.parquet").to_dicts()
-                ),
+                table=rhs_urls.get_plant_urls(),
                 dated=False,
             )
+
+            rhs.get_plants_detail(pl.read_parquet("data\\rhs_urls.parquet").to_dicts())
             cloud_storage.export_data_locally(
                 table=carragh.get_product_data(),
             )
@@ -62,7 +59,15 @@ if __name__ == "__main__":
     parser.add_argument(
         "--site",
         help="Name of the site you would like to fetch data for.",
-        choices=["tullys", "quickcrop", "gardens4you", "carragh", "arboretum", "rhs"],
+        choices=[
+            "tullys",
+            "quickcrop",
+            "gardens4you",
+            "carragh",
+            "arboretum",
+            "rhs",
+            "rhs_urls",
+        ],
     )
     args = parser.parse_args()
     main(args)
