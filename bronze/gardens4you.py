@@ -57,11 +57,12 @@ def parse_products(URL: str, category: str, products: list) -> list[dict]:
     for product in products:
         product_url = product.find("a")["href"]
         try:
-            product_name = product.find("div", class_="botanical-name").text
-        except AttributeError:
             product_name = product.find(
                 "strong", class_="product name product-item-name"
             ).a.text
+
+        except AttributeError:
+            product_name = product.find("div", class_="botanical-name").text
 
         image = product.find("img", class_="product-image-photo")
         try:

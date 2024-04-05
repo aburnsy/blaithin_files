@@ -1,3 +1,5 @@
+#! .venv/Scripts/python.exe
+
 import argparse
 import cloud_storage
 from bronze import tullys, quickcrop, gardens4you, carragh, arboretum, rhs_urls, rhs
