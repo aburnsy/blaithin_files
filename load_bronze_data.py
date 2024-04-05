@@ -2,6 +2,7 @@ import argparse
 import cloud_storage
 from bronze import tullys, quickcrop, gardens4you, carragh, arboretum, rhs_urls, rhs
 import polars as pl
+import pyarrow.dataset as ds
 
 
 def main(params):
@@ -32,15 +33,12 @@ def main(params):
                 dated=False,
             )
         case "rhs":
-            rhs.get_plants_detail(pl.read_parquet("data\\rhs_urls.parquet").to_dicts())
-
-        case _:
-            cloud_storage.export_data_locally(
-                table=rhs_urls.get_plant_urls(),
-                dated=False,
+            rhs.get_plants_detail(pl.read_parquet("data/rhs_urls.parquet").to_dicts())
+            pl.scan_pyarrow_dataset(ds.dataset("data/rhs/")).collect().write_parquet(
+                "data/rhs.parquet"
             )
 
-            rhs.get_plants_detail(pl.read_parquet("data\\rhs_urls.parquet").to_dicts())
+        case _:
             cloud_storage.export_data_locally(
                 table=carragh.get_product_data(),
             )

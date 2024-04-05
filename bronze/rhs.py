@@ -1,17 +1,9 @@
 from requests_html import HTMLSession
 from bs4 import BeautifulSoup
 import polars as pl
-import pyarrow.parquet as pq
 from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import Select
-from selenium.common.exceptions import (
-    NoSuchElementException,
-    StaleElementReferenceException,
-)
 import traceback
 from selenium.webdriver.support.wait import WebDriverWait
-import time
 
 try:
     from .common import ScrollToBottom
@@ -204,15 +196,9 @@ def extract_detailed_plant_data(plant: dict, plant_content) -> dict:
     return extract
 
 
-def fetch_sample_plants() -> list[dict]:
-    """Fetch a sample of locally stored plants for scraping on rhs website"""
-    print("Fetching sample data from rhs_urls parquet file")
-    return pl.read_parquet("data\\rhs_urls.parquet").sample(1000).to_dicts()
-
-
 def get_plants_detail(plants: list[dict]) -> None:
     session = HTMLSession()
-    driver = selenium_setup()
+    driver = webdriver.Chrome()
     if not os.path.exists("data\\rhs"):
         os.mkdir("data\\rhs")
     for plant in plants:
@@ -220,7 +206,6 @@ def get_plants_detail(plants: list[dict]) -> None:
         file_name = f"data\\rhs\\{plant["id"]}.parquet"
         if os.path.isfile(file_name):
             continue
-            # pass
         if (plant_page := session.get(plant_url)).status_code != 200:
             print(f"Given plant URL '{plant_url}' is incorrect.")
             continue
@@ -249,11 +234,6 @@ def get_plants_detail(plants: list[dict]) -> None:
         df.write_parquet(file_name)
 
     driver.quit()
-
-
-def selenium_setup() -> webdriver:
-    driver = webdriver.Chrome()
-    return driver
 
 
 # get_plants_detail(
