@@ -27,6 +27,7 @@ def extract_detailed_plant_data(plant: dict, plant_content) -> dict:
         plant_type = [
             pt.text.strip()
             for pt in plant_content.find_all("span", class_="label ng-star-inserted")
+            if pt.text.strip() != "Synonym"
         ]
     except AttributeError:
         print(f"Cannot find plant type for plant {plant_url}")
