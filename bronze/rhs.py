@@ -14,8 +14,10 @@ import os
 
 def extract_detailed_plant_data(plant: dict, plant_content) -> dict:
     id_ = plant["id"]
-    botanical_name = plant["botanical_name"]
+    # Can't rely on botanical name from api as on occasion it is wrong e.g. https://www.rhs.org.uk/plants/5638/rhododendron-ginny-gee/details
+    botanical_name = plant_content.find("h1", class_="h1--alt").text
     plant_url = plant["plant_url"]
+
     try:
         common_name = plant_content.find("p", class_="summary summary--sub").text
         if common_name == "":
@@ -169,6 +171,14 @@ def extract_detailed_plant_data(plant: dict, plant_content) -> dict:
     except KeyError:
         foliage = None
     habit = [entry.strip() for entry in bottom_panel_dict["Habit"].split(",")]
+
+    try:
+        family = bottom_panel_dict["Family"]
+        if family == "Poaceae":
+            if "Grass Like" not in plant_type:
+                plant_type.extend("Grass Like")
+    except KeyError:
+        pass
 
     extract = {
         "id": id_,
