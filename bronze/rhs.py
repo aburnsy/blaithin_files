@@ -176,7 +176,7 @@ def extract_detailed_plant_data(plant: dict, plant_content) -> dict:
         family = bottom_panel_dict["Family"]
         if family == "Poaceae":
             if "Grass Like" not in plant_type:
-                plant_type.extend("Grass Like")
+                plant_type.append("Grass Like")
     except KeyError:
         pass
 
