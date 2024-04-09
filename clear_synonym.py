@@ -27,8 +27,8 @@ basepath = Path("data/rhs/")
 for myfile in basepath.iterdir():
     length = (
         pl.scan_parquet(myfile)
-        .select(["botanical_name", "plant_type"])
-        .filter(pl.col("plant_type").list.contains("G"))
+        # .select(["botanical_name", "plant_type"])
+        .filter(pl.col("botanical_name").str.contains("The RHS Award of "))
         .select(pl.len())
         .collect()
         .item()

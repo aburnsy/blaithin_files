@@ -15,7 +15,9 @@ import os
 def extract_detailed_plant_data(plant: dict, plant_content) -> dict:
     id_ = plant["id"]
     # Can't rely on botanical name from api as on occasion it is wrong e.g. https://www.rhs.org.uk/plants/5638/rhododendron-ginny-gee/details
-    botanical_name = plant_content.find("h1", class_="h1--alt").text
+    botanical_name = plant_content.find("h1", class_="h1--alt").find("span").text
+    botanical_name = botanical_name.replace("Ã", "x").strip()
+
     plant_url = plant["plant_url"]
 
     try:
@@ -241,18 +243,20 @@ def get_plants_detail(plants: list[dict]) -> None:
                 continue
 
         df = pl.DataFrame([extract])
-
+        # print(df)
         df.write_parquet(file_name)
 
     driver.quit()
 
 
-# get_plants_detail(
-#     [
-#         {
-#             "plant_url": "https://www.rhs.org.uk/plants/83693/tillandsia-albertiana/details",
-#             "id": 83693,
-#             "botanical_name": "Tillandsia albertiana",
-#         },
-#     ]
+# print(
+#     get_plants_detail(
+#         [
+#             {
+#                 "plant_url": "https://www.rhs.org.uk/plants/98658/forsythia-intermedia-lynwood/details",
+#                 "id": 98658,
+#                 "botanical_name": "Tillandsia albertiana",
+#             },
+#         ]
+#     )
 # )
