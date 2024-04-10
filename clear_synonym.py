@@ -28,7 +28,7 @@ for myfile in basepath.iterdir():
     length = (
         pl.scan_parquet(myfile)
         # .select(["botanical_name", "plant_type"])
-        .filter(pl.col("botanical_name").str.contains("The RHS Award of "))
+        .filter(pl.col("botanical_name").str.contains("ã"))
         .select(pl.len())
         .collect()
         .item()
@@ -40,4 +40,4 @@ for myfile in basepath.iterdir():
         print(df)
         # print(f"Removing file {myfile.name}")
         file_path = myfile.resolve()
-        os.remove(file_path)
+        # os.remove(file_path)

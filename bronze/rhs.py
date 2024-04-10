@@ -16,7 +16,7 @@ def extract_detailed_plant_data(plant: dict, plant_content) -> dict:
     id_ = plant["id"]
     # Can't rely on botanical name from api as on occasion it is wrong e.g. https://www.rhs.org.uk/plants/5638/rhododendron-ginny-gee/details
     botanical_name = plant_content.find("h1", class_="h1--alt").find("span").text
-    botanical_name = botanical_name.replace("Ã", "x").strip()
+    botanical_name = botanical_name.replace("Ã", "x").replace("ã", "x").strip()
 
     plant_url = plant["plant_url"]
 

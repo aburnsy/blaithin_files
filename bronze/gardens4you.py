@@ -82,8 +82,10 @@ def parse_products(URL: str, category: str, products: list) -> list[dict]:
             for entry in product.find_all("div", class_="amlabel-text")
         ]
 
-        # size
-        if "roots" in misc or "tubers" in misc:
+        # if it is in the title, then use that
+        if size := re.search(size_pattern_cm, product_name) is not None:
+            pass
+        elif "roots" in misc or "tubers" in misc:
             size = "Bare Root"
         elif "seeds" in misc:
             size = "Seeds"
