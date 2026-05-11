@@ -9,16 +9,16 @@ later tasks of this same sub-project.
 import importlib
 
 
-def test_bronze_scrapers_importable():
+def test_scrapers_importable():
     for name in (
-        "bronze.arboretum",
-        "bronze.carragh",
-        "bronze.common",
-        "bronze.gardens4you",
-        "bronze.quickcrop",
-        "bronze.rhs",
-        "bronze.rhs_urls",
-        "bronze.tullys",
+        "src.scrapers.arboretum",
+        "src.scrapers.carragh",
+        "src.scrapers.common",
+        "src.scrapers.gardens4you",
+        "src.scrapers.quickcrop",
+        "src.scrapers.rhs",
+        "src.scrapers.rhs_urls",
+        "src.scrapers.tullys",
     ):
         importlib.import_module(name)
 

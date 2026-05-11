@@ -2,7 +2,7 @@
 
 import argparse
 import cloud_storage
-from bronze import tullys, quickcrop, gardens4you, carragh, arboretum, rhs_urls, rhs
+from src.scrapers import tullys, quickcrop, gardens4you, carragh, arboretum, rhs_urls, rhs
 import polars as pl
 import pyarrow.dataset as ds
 
