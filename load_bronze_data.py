@@ -2,7 +2,7 @@
 
 import argparse
 from src.common.storage import export_data_locally
-from src.scrapers import tullys, quickcrop, gardens4you, carragh, arboretum, rhs_urls, rhs
+from src.scrapers import tullys, quickcrop, gardens4you, carragh, arboretum, rhs_urls, rhs, hedgingie
 import polars as pl
 import pyarrow.dataset as ds
 from datetime import date
@@ -61,6 +61,10 @@ def main(params):
             export_data_locally(
                 table=arboretum.get_product_data(),
             )
+        case "hedgingie":
+            export_data_locally(
+                table=hedgingie.get_product_data(),
+            )
         case "rhs_urls":
             export_data_locally(
                 table=rhs_urls.get_plant_urls(),
@@ -98,6 +102,7 @@ if __name__ == "__main__":
             "gardens4you",
             "carragh",
             "arboretum",
+            "hedgingie",
             "rhs",
             "rhs_urls",
         ],

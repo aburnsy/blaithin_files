@@ -93,3 +93,15 @@ greengardenflowerbulbs:
   runs_on: self-hosted
   ships_live_plants_to_ireland: true
   notes: "Bulk bulbs. No VAT shown at checkout. Min order applies."
+
+hedgingie:
+  display_name: "Hedging.ie"
+  base_url: https://hedging.ie
+  currency: EUR
+  vat_included: true
+  delivery_type: free
+  delivery_fees: []
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: "Free delivery — top value pick from research."
