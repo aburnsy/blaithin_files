@@ -7,7 +7,7 @@ file makes the pipeline's data contract easy to read end-to-end.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -126,5 +126,7 @@ class MatchOverride(BaseModel):
     product_category: ProductCategory = "plant"
     source: Literal["llm", "manual"]
     model: Optional[str] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
     notes: Optional[str] = None
