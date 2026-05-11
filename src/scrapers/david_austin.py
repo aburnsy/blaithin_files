@@ -14,7 +14,6 @@ from __future__ import annotations
 import importlib
 import json
 import re
-from typing import Optional
 from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
@@ -71,7 +70,7 @@ class DavidAustinScraper(BaseScraper):
 
     def parse_product(
         self, html: str, product_url: str, source_url: str, category: str
-    ) -> Optional[dict]:
+    ) -> dict | None:
         """Parse a Shopify product page.  Returns a dict or None to drop.
 
         Extracts data primarily from JSON-LD structured data, which on David
@@ -125,7 +124,7 @@ class DavidAustinScraper(BaseScraper):
     @staticmethod
     def _extract_from_ld(
         soup: BeautifulSoup,
-    ) -> tuple[Optional[float], Optional[bool], Optional[str]]:
+    ) -> tuple[float | None, bool | None, str | None]:
         """Extract lowest available price, in-stock flag, and variant/size name from JSON-LD.
 
         David Austin's JSON-LD uses an Offer[] list where each offer represents a
@@ -175,7 +174,7 @@ class DavidAustinScraper(BaseScraper):
         return None, None, None
 
     @staticmethod
-    def _extract_price_from_html(soup: BeautifulSoup) -> Optional[float]:
+    def _extract_price_from_html(soup: BeautifulSoup) -> float | None:
         """Fallback: parse first .money span on the page."""
         el = soup.select_one(".money")
         if not el:
@@ -194,7 +193,7 @@ class DavidAustinScraper(BaseScraper):
             return None
 
     @staticmethod
-    def _extract_image(soup: BeautifulSoup) -> Optional[str]:
+    def _extract_image(soup: BeautifulSoup) -> str | None:
         """Return image URL from og:image meta tag (most reliable on Shopify)."""
         og = soup.find("meta", property="og:image")
         if og:
@@ -206,7 +205,7 @@ class DavidAustinScraper(BaseScraper):
         return None
 
     @staticmethod
-    def _extract_description(soup: BeautifulSoup) -> Optional[str]:
+    def _extract_description(soup: BeautifulSoup) -> str | None:
         """Return description from meta description or product description div."""
         # JSON-LD description is most reliable but we already parsed the LD block;
         # use meta description as a quick fallback here.

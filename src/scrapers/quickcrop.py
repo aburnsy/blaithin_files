@@ -1,16 +1,15 @@
 #!/usr/bin/env python
-# coding: utf-8
-from requests_html import HTMLSession
-from bs4 import BeautifulSoup
-import re
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import Select
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions
-from selenium.common.exceptions import NoSuchElementException, TimeoutException
-import time
 import importlib
+import re
+import time
+
+from bs4 import BeautifulSoup
+from requests_html import HTMLSession
+from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions
+from selenium.webdriver.support.ui import Select, WebDriverWait
 
 
 def selenium_setup() -> webdriver:

@@ -11,8 +11,6 @@ from __future__ import annotations
 import importlib
 import json
 import re
-from typing import Optional
-from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 
@@ -51,7 +49,7 @@ class HedgingIeScraper(BaseScraper):
 
     def parse_product(
         self, html: str, product_url: str, source_url: str, category: str
-    ) -> Optional[dict]:
+    ) -> dict | None:
         """Parse a WooCommerce product page. Returns a dict or None to drop."""
         soup = BeautifulSoup(html, "html.parser")
 
@@ -114,7 +112,7 @@ class HedgingIeScraper(BaseScraper):
     @staticmethod
     def _extract_price_and_stock_from_ld(
         soup: BeautifulSoup,
-    ) -> tuple[Optional[float], Optional[bool]]:
+    ) -> tuple[float | None, bool | None]:
         """Extract lowest price and in-stock flag from JSON-LD AggregateOffer / Offer."""
         for script in soup.find_all("script", type="application/ld+json"):
             try:
@@ -140,14 +138,14 @@ class HedgingIeScraper(BaseScraper):
                 except (ValueError, TypeError):
                     price = None
                 availability = first.get("availability", "")
-                in_stock: Optional[bool] = None
+                in_stock: bool | None = None
                 if availability:
                     in_stock = _SCHEMA_AVAILABILITY_IN_STOCK in availability
                 return price, in_stock
         return None, None
 
     @staticmethod
-    def _extract_price_from_html(soup: BeautifulSoup) -> Optional[float]:
+    def _extract_price_from_html(soup: BeautifulSoup) -> float | None:
         """Fallback: parse first .woocommerce-Price-amount bdi text."""
         bdi = soup.select_one(".woocommerce-Price-amount bdi")
         if not bdi:
@@ -165,7 +163,7 @@ class HedgingIeScraper(BaseScraper):
             return None
 
     @staticmethod
-    def _extract_stock_from_html(soup: BeautifulSoup) -> Optional[bool]:
+    def _extract_stock_from_html(soup: BeautifulSoup) -> bool | None:
         """Read WooCommerce .stock span for in/out-of-stock."""
         out_el = soup.select_one(".stock.out-of-stock")
         if out_el:
@@ -176,7 +174,7 @@ class HedgingIeScraper(BaseScraper):
         return None
 
     @staticmethod
-    def _extract_size(soup: BeautifulSoup) -> Optional[str]:
+    def _extract_size(soup: BeautifulSoup) -> str | None:
         """Return the first non-empty size option label from the WooCommerce variation select."""
         size_select = soup.find("select", attrs={"name": re.compile(r"attribute_pa_size")})
         if not size_select:

@@ -7,8 +7,8 @@ file makes the pipeline's data contract easy to read end-to-end.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Literal, Optional
+from datetime import UTC, datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -42,10 +42,10 @@ class ParsedName(BaseModel):
 
     genus: str
     species: str
-    cultivar: Optional[str] = None
-    cultivar_group: Optional[str] = None
-    rank: Optional[str] = None  # e.g. "var.", "subsp."
-    raw: Optional[str] = None  # original input string for debugging
+    cultivar: str | None = None
+    cultivar_group: str | None = None
+    rank: str | None = None  # e.g. "var.", "subsp."
+    raw: str | None = None  # original input string for debugging
 
 
 class MatchResult(BaseModel):
@@ -53,7 +53,7 @@ class MatchResult(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    rhs_id: Optional[int] = None
+    rhs_id: int | None = None
     method: MatchMethod
     confidence: float = Field(ge=0.0, le=1.0)
 
@@ -68,22 +68,22 @@ class RhsRecord(BaseModel):
     common_names: list[str] = Field(default_factory=list)
     synonyms: list[str] = Field(default_factory=list)
     plant_type: list[str] = Field(default_factory=list)
-    family: Optional[str] = None
-    description: Optional[str] = None
+    family: str | None = None
+    description: str | None = None
     is_rhs_award_winner: bool = False
     is_pollinator_plant: bool = False
-    height: Optional[str] = None
-    spread: Optional[str] = None
+    height: str | None = None
+    spread: str | None = None
     soils: list[str] = Field(default_factory=list)
-    moisture: Optional[str] = None
+    moisture: str | None = None
     ph: list[str] = Field(default_factory=list)
     sun_exposure: list[str] = Field(default_factory=list)
     aspect: list[str] = Field(default_factory=list)
     exposure: list[str] = Field(default_factory=list)
-    hardiness: Optional[str] = None
+    hardiness: str | None = None
     foliage: list[str] = Field(default_factory=list)
     habit: list[str] = Field(default_factory=list)
-    plant_url: Optional[str] = None
+    plant_url: str | None = None
 
 
 class ProductRecord(BaseModel):
@@ -91,42 +91,42 @@ class ProductRecord(BaseModel):
 
     source: str
     product_url: str
-    source_url: Optional[str] = None
-    category: Optional[str] = None
+    source_url: str | None = None
+    category: str | None = None
     product_name_raw: str
     product_name_clean: str
-    genus: Optional[str] = None
-    species: Optional[str] = None
-    cultivar: Optional[str] = None
-    cultivar_group: Optional[str] = None
-    rhs_id: Optional[int] = None
+    genus: str | None = None
+    species: str | None = None
+    cultivar: str | None = None
+    cultivar_group: str | None = None
+    rhs_id: int | None = None
     match_method: MatchMethod = "unmatched"
     match_confidence: float = 0.0
     is_plant: bool = True
     product_category: ProductCategory = "plant"
-    price_native: Optional[float] = None
+    price_native: float | None = None
     currency: str = "EUR"
-    price_eur: Optional[float] = None
-    size: Optional[str] = None
-    pot_size_litres: Optional[float] = None
-    stock: Optional[int] = None
+    price_eur: float | None = None
+    size: str | None = None
+    pot_size_litres: float | None = None
+    stock: int | None = None
     quantity_per_pack: int = 1
-    img_url: Optional[str] = None
-    description: Optional[str] = None
-    input_date: Optional[datetime] = None
+    img_url: str | None = None
+    description: str | None = None
+    input_date: datetime | None = None
 
 
 class MatchOverride(BaseModel):
     """A single row in `data/match_overrides.parquet`."""
 
     product_name_clean: str
-    rhs_id: Optional[int] = None
-    cultivar: Optional[str] = None
+    rhs_id: int | None = None
+    cultivar: str | None = None
     is_plant: bool = True
     product_category: ProductCategory = "plant"
     source: Literal["llm", "manual"]
-    model: Optional[str] = None
+    model: str | None = None
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
+        default_factory=lambda: datetime.now(UTC)
     )
-    notes: Optional[str] = None
+    notes: str | None = None

@@ -10,7 +10,6 @@ Rules:
 from __future__ import annotations
 
 import re
-from typing import Optional
 
 from src.matching.models import ParsedName, ProductCategory
 
@@ -27,7 +26,7 @@ _SEED_INDICATORS = re.compile(r"\b(?:seed|seeds|seed packet|sachet)\b", re.I)
 
 
 def classify_product(
-    raw: str, parsed: Optional[ParsedName]
+    raw: str, parsed: ParsedName | None
 ) -> tuple[bool, ProductCategory]:
     """Return (is_plant, product_category) for a product."""
 

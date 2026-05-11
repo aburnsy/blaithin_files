@@ -7,7 +7,6 @@ from src.matching.models import (
     MatchOverride,
     MatchResult,
     ParsedName,
-    ProductRecord,
     RhsRecord,
 )
 

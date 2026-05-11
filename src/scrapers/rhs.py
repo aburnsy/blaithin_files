@@ -1,8 +1,9 @@
-from requests_html import HTMLSession
-from bs4 import BeautifulSoup
-import polars as pl
-from selenium import webdriver
 import traceback
+
+import polars as pl
+from bs4 import BeautifulSoup
+from requests_html import HTMLSession
+from selenium import webdriver
 from selenium.webdriver.support.wait import WebDriverWait
 
 try:

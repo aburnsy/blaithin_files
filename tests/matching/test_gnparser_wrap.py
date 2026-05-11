@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.matching.gnparser_wrap import parse, ParseFailed
+from src.matching.gnparser_wrap import ParseFailed, parse
 
 
 def test_parse_simple_binomial():

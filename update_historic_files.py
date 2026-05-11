@@ -1,7 +1,8 @@
-import polars as pl
-import os
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
+import polars as pl
+
 from src.common import storage as cloud_storage
 
 folder_path = "data/gardens4you/"

@@ -1,6 +1,5 @@
 """Tests for the deterministic non-plant prefilter."""
 
-import pytest
 
 from src.matching.classify import classify_product
 from src.matching.models import ParsedName

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import importlib
 import re
-from typing import Optional
 
 from bs4 import BeautifulSoup
 
@@ -54,7 +53,7 @@ class Gardens4YouScraper(BaseScraper):
 
     def parse_product(
         self, html: str, product_url: str, source_url: str, category: str
-    ) -> Optional[dict]:
+    ) -> dict | None:
         """Parse a product page. Returns a dict or None to drop (never raises)."""
         soup = BeautifulSoup(html, "html.parser")
 
@@ -102,7 +101,7 @@ class Gardens4YouScraper(BaseScraper):
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _extract_price(soup: BeautifulSoup) -> Optional[float]:
+    def _extract_price(soup: BeautifulSoup) -> float | None:
         # Most reliable: data-price-amount attribute on the main product price widget
         el = soup.find(attrs={"data-price-amount": True})
         if el:
@@ -123,7 +122,7 @@ class Gardens4YouScraper(BaseScraper):
         return None
 
     @staticmethod
-    def _extract_size(soup: BeautifulSoup, product_name: str) -> Optional[str]:
+    def _extract_size(soup: BeautifulSoup, product_name: str) -> str | None:
         """Extract pot/height size from product attribute divs or product name.
 
         Returns None if no size signal found — caller must treat size as optional.
@@ -160,7 +159,7 @@ class Gardens4YouScraper(BaseScraper):
         return None  # Unknown — let caller handle as nullable
 
     @staticmethod
-    def _extract_stock(soup: BeautifulSoup) -> Optional[int]:
+    def _extract_stock(soup: BeautifulSoup) -> int | None:
         """Return stock count or None."""
         stock_span = soup.find("span", class_=re.compile(r"amstockstatus"))
         if stock_span:
