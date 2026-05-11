@@ -1,4 +1,4 @@
-"""Reference: legacy plant-to-product matcher from the Mage AI pipeline.
+"""DO NOT IMPORT — reference-only copy of the legacy Mage AI matcher.
 
 Source: blaithin/docker/blaithin/transformers/match_product_to_plant.py
 (sister repo as of 2026-05-11)
@@ -11,7 +11,8 @@ which will REPLACE this approach with:
   - LLM batch fallback for the long tail
   - cultivar preserved as a first-class column on the product row
 
-DO NOT IMPORT from this module. It will be deleted at the end of sub-project 2.
+Importing this module will fail at runtime (mage_ai is not installed in this
+venv). The file will be deleted at the end of sub-project 2.
 """
 
 # ---- ORIGINAL CONTENT BELOW ----

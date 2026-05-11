@@ -1,4 +1,4 @@
-"""Reference: legacy "combine RHS botanical and common names" transformer.
+"""DO NOT IMPORT — reference-only copy of the legacy combine-names transformer.
 
 Source: blaithin/docker/blaithin/transformers/combine_common_and_botanical_names.py
 (sister repo as of 2026-05-11)
@@ -8,7 +8,8 @@ The REPLACEMENT keeps RHS records as one row per (genus, species) with a
 synonyms[] field, instead of flattening botanical and common names into a
 single deduped column. See spec §6.1 for the new schema.
 
-DO NOT IMPORT from this module. It will be deleted at the end of sub-project 2.
+Importing this module will fail at runtime (mage_ai is not installed in this
+venv). The file will be deleted at the end of sub-project 2.
 """
 
 # ---- ORIGINAL CONTENT BELOW ----
