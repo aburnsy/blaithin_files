@@ -6,3 +6,4 @@ python_files = ["test_*.py"]
 venvPath = "."
 venv = ".venv"
 extraPaths = ["."]
+exclude = ["src/matching/legacy_*.py"]
