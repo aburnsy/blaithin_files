@@ -13,7 +13,6 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from datetime import date
-from typing import Optional
 
 from src.common.logging import get_logger
 from src.common.report import ScrapeReport
@@ -54,7 +53,7 @@ class BaseScraper(ABC):
     @abstractmethod
     def parse_product(
         self, html: str, product_url: str, source_url: str, category: str
-    ) -> Optional[dict]:
+    ) -> dict | None:
         """Given product page HTML, return a product dict or None to drop."""
 
     def fetch(self, url: str) -> str:

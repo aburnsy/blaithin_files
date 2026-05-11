@@ -1,9 +1,10 @@
-import requests
 import json
-from bs4 import BeautifulSoup
-from string import ascii_lowercase
-import polars as pl
 import urllib.parse
+from string import ascii_lowercase
+
+import polars as pl
+import requests
+from bs4 import BeautifulSoup
 
 plant_type_mapping = {
     1: "Herbaceous Perennial",

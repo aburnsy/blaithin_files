@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 
-from src.scrapers.http import build_client, fetch_html, RetryExhausted
+from src.scrapers.http import RetryExhausted, build_client, fetch_html
 
 
 def test_build_client_returns_httpx_client():

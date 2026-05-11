@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, ConfigDict
 
 
@@ -14,16 +12,16 @@ class RawProduct(BaseModel):
 
     source: str
     product_url: str
-    source_url: Optional[str] = None
-    category: Optional[str] = None
+    source_url: str | None = None
+    category: str | None = None
     product_name_raw: str
-    price_native: Optional[float] = None
+    price_native: float | None = None
     currency: str = "EUR"
-    size: Optional[str] = None
-    stock: Optional[int] = None
+    size: str | None = None
+    stock: int | None = None
     quantity_per_pack: int = 1
-    img_url: Optional[str] = None
-    description: Optional[str] = None
+    img_url: str | None = None
+    description: str | None = None
 
 
 def validate_record(record: dict) -> RawProduct:

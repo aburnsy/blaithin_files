@@ -14,7 +14,7 @@ class RhsIndex:
         self._by_gs = by_genus_species
 
     @classmethod
-    def from_dataframe(cls, df: pl.DataFrame) -> "RhsIndex":
+    def from_dataframe(cls, df: pl.DataFrame) -> RhsIndex:
         """Build an index from a polars DataFrame with botanical_name + rhs_id columns.
 
         Accepts either `rhs_id` (new schema) or `id` (legacy production parquet

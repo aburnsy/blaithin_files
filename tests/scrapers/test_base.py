@@ -1,6 +1,5 @@
 """Tests for the BaseScraper ABC."""
 
-from datetime import date
 
 import pytest
 

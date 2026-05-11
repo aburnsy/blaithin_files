@@ -1,9 +1,6 @@
 """Tests for structlog configuration."""
 
 import json
-from pathlib import Path
-
-import pytest
 
 
 def test_get_logger_returns_bound_logger():

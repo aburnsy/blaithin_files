@@ -2,8 +2,6 @@
 
 from pathlib import Path
 
-import pytest
-
 from src.scrapers.hedgingie import HedgingIeScraper
 
 CASSETTES = Path(__file__).resolve().parents[1] / "fixtures" / "cassettes"

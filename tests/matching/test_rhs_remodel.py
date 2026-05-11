@@ -1,6 +1,5 @@
 """Tests for migrating the legacy rhs.parquet to the new schema."""
 
-from pathlib import Path
 
 import polars as pl
 

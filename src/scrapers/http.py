@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import time
-from typing import Optional
 
 import httpx
 from tenacity import (
@@ -29,7 +28,7 @@ class RetryExhausted(Exception):
 def build_client(
     *,
     rate_limit_seconds: float = 1.0,
-    user_agent: Optional[str] = None,
+    user_agent: str | None = None,
     timeout: float = 30.0,
 ) -> httpx.Client:
     """Build an httpx.Client with sensible defaults.

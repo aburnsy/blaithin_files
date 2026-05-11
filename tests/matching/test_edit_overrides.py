@@ -2,10 +2,6 @@
 
 import subprocess
 import sys
-from pathlib import Path
-
-import polars as pl
-import pytest
 
 from src.matching.models import MatchOverride
 from src.matching.overrides import save_overrides

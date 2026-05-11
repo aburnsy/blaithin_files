@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Literal
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
@@ -20,7 +20,7 @@ class DeliveryFee(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    max_value_eur: Optional[float] = None
+    max_value_eur: float | None = None
     fee_eur: float
 
 
@@ -41,7 +41,7 @@ class NurseryConfig(BaseModel):
     notes: str = ""
 
 
-def load_nurseries(path: Optional[Path] = None) -> dict[str, NurseryConfig]:
+def load_nurseries(path: Path | None = None) -> dict[str, NurseryConfig]:
     """Load and validate the nurseries config. Returns dict keyed by source slug."""
 
     config_path = path or CONFIG_PATH

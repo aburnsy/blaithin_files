@@ -1,12 +1,12 @@
 #!/usr/bin/env python
-# coding: utf-8
+import importlib
+import re
+
 from bs4 import BeautifulSoup
 from requests_html import HTMLSession
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-import re
 from selenium.webdriver.support.wait import WebDriverWait
-import importlib
 
 try:
     from .common import ScrollToBottom

@@ -1,14 +1,10 @@
 """Round-trip tests for match_overrides.parquet read/write."""
 
-from datetime import datetime
-from pathlib import Path
 
-import polars as pl
 import pytest
 
 from src.matching.models import MatchOverride
 from src.matching.overrides import (
-    OVERRIDES_PARQUET,
     load_overrides,
     save_overrides,
     upsert_override,

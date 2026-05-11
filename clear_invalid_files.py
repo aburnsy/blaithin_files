@@ -1,7 +1,8 @@
-import polars as pl
-import pyarrow.dataset as ds
 import os
 from pathlib import Path
+
+import polars as pl
+
 # df = pl.scan_parquet(
 #     "./data/rhs/1.parquet",
 # )

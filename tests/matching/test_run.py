@@ -55,7 +55,6 @@ def test_pipeline_classifies_non_plants(rhs_df, products_df):
 
 from unittest.mock import patch
 
-from src.matching.models import MatchOverride
 from src.matching.run import run_with_llm_fallback
 
 
@@ -68,6 +67,7 @@ def test_llm_fallback_persists_overrides(mock_client_cls, rhs_df, products_df, t
 
     import json
     from unittest.mock import MagicMock
+
     from src.matching.normalize import clean_product_name
     mock_client = MagicMock()
     mock_client_cls.return_value = mock_client

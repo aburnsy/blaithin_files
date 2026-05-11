@@ -1,17 +1,17 @@
 #!/usr/bin/env python
-# coding: utf-8
-from requests_html import HTMLSession
-from bs4 import BeautifulSoup
+import importlib
 import re
+import time
+
+from bs4 import BeautifulSoup
+from requests_html import HTMLSession
 from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import Select
 from selenium.common.exceptions import (
     NoSuchElementException,
     StaleElementReferenceException,
 )
-import importlib
-import time
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import Select
 
 
 def selenium_setup() -> webdriver:

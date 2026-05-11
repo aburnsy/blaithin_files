@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-# coding: utf-8
-from requests_html import HTMLSession
-from bs4 import BeautifulSoup
-from urllib.parse import urljoin
 import importlib
+from urllib.parse import urljoin
+
+from bs4 import BeautifulSoup
+from requests_html import HTMLSession
 
 
 def parse_products(URL: str, category: str, products: list) -> list[dict]:

@@ -1,7 +1,8 @@
-import polars as pl
-import pyarrow.parquet as pq
 import datetime
 from pathlib import Path
+
+import polars as pl
+import pyarrow.parquet as pq
 
 
 def add_defaults_to_fields(

@@ -1,6 +1,6 @@
-import polars as pl
-import os
 from pathlib import Path
+
+import polars as pl
 
 lazydf = []
 

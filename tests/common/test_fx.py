@@ -1,11 +1,10 @@
 """Tests for FX rate conversion."""
 
 from datetime import date
-from decimal import Decimal
 
 import pytest
 
-from src.common.fx import to_eur, FxRateMissing
+from src.common.fx import FxRateMissing, to_eur
 
 
 def test_to_eur_passthrough_for_eur():

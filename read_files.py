@@ -1,5 +1,5 @@
-import pyarrow.dataset as ds
 import polars as pl
+import pyarrow.dataset as ds
 
 df = pl.scan_pyarrow_dataset(ds.dataset("data/tullys/")).collect()
 

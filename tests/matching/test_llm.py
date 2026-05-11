@@ -2,8 +2,6 @@
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from src.matching.llm import batch_resolve
 from src.matching.models import MatchOverride
 
