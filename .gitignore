@@ -136,7 +136,12 @@ venv.bak/
 .ropeproject
 
 # mkdocs documentation
-/site
+# /site  # commented out — site/ is used by Observable Framework
+
+# Observable Framework
+site/node_modules/
+site/dist/
+site/.observablehq/
 
 # mypy
 .mypy_cache/
