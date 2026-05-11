@@ -143,6 +143,9 @@ site/node_modules/
 site/dist/
 site/.observablehq/
 
+# Scrape run logs (structlog JSONL output)
+logs/
+
 # mypy
 .mypy_cache/
 .dmypy.json

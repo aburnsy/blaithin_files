@@ -23,6 +23,8 @@ jobs:
   match-and-commit:
     needs: scrape
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -30,7 +32,10 @@ jobs:
       - run: pip install -r requirements.txt
       - uses: actions/download-artifact@v4
         with: { path: data }
-      - run: python load_bronze_data.py --matching --no-llm
+      - name: Run matching pipeline (LLM fallback enabled)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python load_bronze_data.py --matching
       - name: Commit data
         run: |
           git config user.name "github-actions[bot]"
