@@ -1,6 +1,7 @@
 import polars as pl
 import pyarrow.parquet as pq
 import datetime
+from pathlib import Path
 
 
 def add_defaults_to_fields(
@@ -25,12 +26,11 @@ def export_data_locally(table: list[dict], dated: bool = True) -> None:
             df, field_name="input_date", default_value=datetime.date.today()
         )
 
-        file_name = (
-            f"data\\{source}\\{datetime.date.today().strftime('%Y-%m-%d')}.parquet"
-        )
+        file_path = Path("data") / source / f"{datetime.date.today().strftime('%Y-%m-%d')}.parquet"
     else:
-        file_name = f"data\\{source}.parquet"
+        file_path = Path("data") / f"{source}.parquet"
 
+    file_path.parent.mkdir(parents=True, exist_ok=True)
     table = df.to_arrow()
-    print(f"Storing data to file '{file_name}'")
-    pq.write_table(table, file_name)
+    print(f"Storing data to file '{file_path}'")
+    pq.write_table(table, file_path)
