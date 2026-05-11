@@ -28,14 +28,20 @@ def extract_detailed_plant_data(plant: dict, plant_content) -> dict:
         common_name = None
 
     try:
-        plant_type = [
-            pt.text.strip()
-            for pt in plant_content.find_all("span", class_="label ng-star-inserted")
-            if pt.text.strip() != "Synonym"
-        ]
+        all_labels = plant_content.find_all("span", class_="label ng-star-inserted")
+        plant_type = [pt.text.strip() for pt in all_labels if pt.text.strip() != "Synonym"]
+
+        synonyms: list[str] = []
+        for label in all_labels:
+            if label.text.strip() == "Synonym":
+                parent = label.parent
+                synonym_text = parent.get_text(strip=True).replace("Synonym", "", 1).strip()
+                if synonym_text:
+                    synonyms.append(synonym_text)
     except AttributeError:
         print(f"Cannot find plant type for plant {plant_url}")
         plant_type = []
+        synonyms = []
 
     try:
         description = plant_content.find("p", class_="ng-star-inserted").text.strip()
@@ -189,6 +195,7 @@ def extract_detailed_plant_data(plant: dict, plant_content) -> dict:
         "botanical_name": botanical_name,
         "common_name": common_name,
         "plant_type": plant_type,
+        "synonyms": synonyms,
         "description": description,
         "is_rhs_award_winner": is_rhs_award_winner,
         "is_pollinator_plant": is_pollinator_plant,

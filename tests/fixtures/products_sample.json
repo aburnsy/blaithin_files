@@ -1,0 +1,122 @@
+[
+  {
+    "raw": "Standard Eucalyptus Gunnii Tree",
+    "expected_clean": "Standard Eucalyptus Gunnii Tree"
+  },
+  {
+    "raw": "Magnolia soulangeana Alexandrina",
+    "expected_clean": "Magnolia soulangeana Alexandrina"
+  },
+  {
+    "raw": "Brugmansia tricolour",
+    "expected_clean": "Brugmansia tricolour"
+  },
+  {
+    "raw": "Lythrum Morden Pink 9 cm pot",
+    "expected_clean": "Lythrum Morden Pink"
+  },
+  {
+    "raw": "Pennisetum Alopecuroides Herbstzauber",
+    "expected_clean": "Pennisetum Alopecuroides Herbstzauber"
+  },
+  {
+    "raw": "Aquilegia Ruby Port x 3",
+    "expected_clean": null
+  },
+  {
+    "raw": "Climbing Rose New Dawn",
+    "expected_clean": "Climbing Rose New Dawn"
+  },
+  {
+    "raw": "Prunus Laurocerasus Etna 9 cm pot",
+    "expected_clean": "Prunus Laurocerasus Etna"
+  },
+  {
+    "raw": "Lonicera Deep Golden",
+    "expected_clean": "Lonicera Deep Golden"
+  },
+  {
+    "raw": "Cytisus Lena",
+    "expected_clean": "Cytisus Lena"
+  },
+  {
+    "raw": "Paeonia Francoise Ortegat Bare root",
+    "expected_clean": null
+  },
+  {
+    "raw": "Magnolia Susan",
+    "expected_clean": "Magnolia Susan"
+  },
+  {
+    "raw": "Festuca glauca Elijah Blue P7",
+    "expected_clean": "Festuca glauca Elijah Blue"
+  },
+  {
+    "raw": "Cotinus Golden Lady 9 cm pot",
+    "expected_clean": "Cotinus Golden Lady"
+  },
+  {
+    "raw": "Lonicera Red",
+    "expected_clean": "Lonicera Red"
+  },
+  {
+    "raw": "Bamboo Fargesia Robusta Pingwu",
+    "expected_clean": "Bamboo Fargesia Robusta Pingwu"
+  },
+  {
+    "raw": "Pennisetum alopecuroides Lumen Gold",
+    "expected_clean": "Pennisetum alopecuroides Lumen Gold"
+  },
+  {
+    "raw": "Fig carica Blanca Gota",
+    "expected_clean": "Fig carica Blanca Gota"
+  },
+  {
+    "raw": "Rubus fruticosus Nessy 120 cm pot",
+    "expected_clean": "Rubus fruticosus Nessy"
+  },
+  {
+    "raw": "Camellia japonica red 9cm",
+    "expected_clean": "Camellia japonica red"
+  },
+  {
+    "raw": "Fern Dicksonia antarctica",
+    "expected_clean": "Fern Dicksonia antarctica"
+  },
+  {
+    "raw": "Picea Glauca J.w. Daisys White",
+    "expected_clean": "Picea Glauca J.w. Daisys White"
+  },
+  {
+    "raw": "Miscanthus sinensis kleine Silberspinne",
+    "expected_clean": "Miscanthus sinensis kleine Silberspinne"
+  },
+  {
+    "raw": "Standard Plum Opal",
+    "expected_clean": "Standard Plum Opal"
+  },
+  {
+    "raw": "Osmanthus burkwoodii 9 cm pot",
+    "expected_clean": "Osmanthus burkwoodii"
+  },
+  {
+    "raw": "Lavender angustifolia Munstead 14 cm",
+    "expected_clean": "Lavender angustifolia Munstead"
+  },
+  {
+    "raw": "Standard Rose Pink 19 cm pot",
+    "expected_clean": "Standard Rose Pink"
+  },
+  {
+    "raw": "Chaenomeles japonica Sargentii",
+    "expected_clean": "Chaenomeles japonica Sargentii"
+  },
+  {
+    "raw": "Iris Tulip Festival",
+    "expected_clean": "Iris Tulip Festival"
+  },
+  {
+    "raw": "Acer palmatum Phoenix",
+    "expected_clean": "Acer palmatum Phoenix"
+  }
+]

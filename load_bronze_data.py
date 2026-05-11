@@ -5,6 +5,38 @@ from src.common.storage import export_data_locally
 from src.scrapers import tullys, quickcrop, gardens4you, carragh, arboretum, rhs_urls, rhs
 import polars as pl
 import pyarrow.dataset as ds
+from datetime import date
+from pathlib import Path
+
+NURSERIES = ("tullys", "quickcrop", "gardens4you", "carragh", "arboretum")
+
+
+def _run_matching(*, llm_enabled: bool) -> None:
+    """Load latest per-nursery parquets + RHS, run the matching pipeline, write output."""
+
+    from src.matching.run import run_with_llm_fallback
+
+    frames = []
+    for nursery in NURSERIES:
+        nursery_dir = Path(f"data/{nursery}")
+        parquets = sorted(nursery_dir.glob("*.parquet"))
+        if not parquets:
+            print(f"No parquets for {nursery}, skipping.")
+            continue
+        frames.append(pl.read_parquet(parquets[-1]).with_columns(pl.lit(nursery).alias("source")))
+
+    if not frames:
+        raise SystemExit("No nursery parquets found — run scrapes first.")
+
+    products_df = pl.concat(frames, how="diagonal_relaxed").rename(
+        {"product_name": "product_name_raw"}
+    )
+    rhs_df = pl.read_parquet("data/rhs.parquet")
+
+    matched = run_with_llm_fallback(products_df, rhs_df, llm_enabled=llm_enabled)
+    out = Path("data/products_matched.parquet")
+    matched.write_parquet(out)
+    print(f"Wrote {len(matched)} matched products -> {out}")
 
 
 def main(params):
@@ -54,9 +86,10 @@ def main(params):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Scrape data from sites and store to gcs bronze area"
+        description="Scrape nurseries, manage RHS data, or run the matching pipeline."
     )
-    parser.add_argument(
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument(
         "--site",
         help="Name of the site you would like to fetch data for.",
         choices=[
@@ -69,5 +102,19 @@ if __name__ == "__main__":
             "rhs_urls",
         ],
     )
+    mode.add_argument(
+        "--matching",
+        action="store_true",
+        help="Run the matching pipeline against the latest scraped data.",
+    )
+    parser.add_argument(
+        "--no-llm",
+        action="store_true",
+        help="When used with --matching, skip the LLM fallback (deterministic only).",
+    )
     args = parser.parse_args()
-    main(args)
+
+    if args.matching:
+        _run_matching(llm_enabled=not args.no_llm)
+    else:
+        main(args)
