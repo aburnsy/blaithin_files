@@ -6,40 +6,29 @@ cannot accidentally break the orchestrator's imports. After the refactor, the
 later tasks of this same sub-project.
 """
 
+import importlib
+
 
 def test_bronze_scrapers_importable():
-    from bronze import (
-        arboretum,
-        carragh,
-        common,
-        gardens4you,
-        quickcrop,
-        rhs,
-        rhs_urls,
-        tullys,
-    )
-
-    for module in (
-        arboretum,
-        carragh,
-        common,
-        gardens4you,
-        quickcrop,
-        rhs,
-        rhs_urls,
-        tullys,
+    for name in (
+        "bronze.arboretum",
+        "bronze.carragh",
+        "bronze.common",
+        "bronze.gardens4you",
+        "bronze.quickcrop",
+        "bronze.rhs",
+        "bronze.rhs_urls",
+        "bronze.tullys",
     ):
-        assert module is not None
+        importlib.import_module(name)
 
 
 def test_cloud_storage_importable():
-    import cloud_storage
+    cloud_storage = importlib.import_module("cloud_storage")
 
     assert hasattr(cloud_storage, "export_data_locally")
     assert hasattr(cloud_storage, "add_defaults_to_fields")
 
 
 def test_orchestrator_importable():
-    import load_bronze_data
-
-    assert load_bronze_data is not None
+    importlib.import_module("load_bronze_data")
