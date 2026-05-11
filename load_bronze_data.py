@@ -36,7 +36,7 @@ def _run_matching(*, llm_enabled: bool) -> None:
     matched = run_with_llm_fallback(products_df, rhs_df, llm_enabled=llm_enabled)
     out = Path("data/products_matched.parquet")
     matched.write_parquet(out)
-    print(f"Wrote {len(matched)} matched products → {out}")
+    print(f"Wrote {len(matched)} matched products -> {out}")
 
 
 def main(params):

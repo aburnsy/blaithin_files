@@ -87,7 +87,7 @@ def run_matching(
             "product_category": category,
         })
 
-    return pl.DataFrame(out_rows)
+    return pl.DataFrame(out_rows, infer_schema_length=None)
 
 
 def run_with_llm_fallback(
