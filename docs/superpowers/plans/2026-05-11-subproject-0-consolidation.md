@@ -84,9 +84,9 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 ```
 
-- [ ] **Step 4: Add pytest to requirements**
+- [ ] **Step 4: Add pytest and lxml_html_clean to requirements**
 
-Edit `requirements.txt` to add a single new line:
+Edit `requirements.txt` to add two new lines:
 ```
 requests-html
 selenium
@@ -94,7 +94,10 @@ bs4
 polars==0.20.16
 pyarrow
 pytest
+lxml_html_clean
 ```
+
+The `lxml_html_clean` package is a discovered transitive dependency: `requests-html` (unmaintained) imports `from lxml.html.clean import Cleaner`, which `lxml >= 5` no longer ships in-package. Without `lxml_html_clean` (or pinning `lxml<5`), every scraper that imports `requests-html` will fail at import time. We add `lxml_html_clean` rather than pinning `lxml<5` because the latter is the upstream-recommended path; both `requests-html` and `requests-html`'s direct usage of `lxml` will be removed entirely in sub-project 1 (`httpx` + `playwright`).
 
 - [ ] **Step 5: Install pytest into the active venv**
 
@@ -140,7 +143,8 @@ Write `tests/smoke/__init__.py` (empty file).
 
 - [ ] **Step 2: Write the smoke test for current paths**
 
-Write `tests/smoke/test_imports.py`:
+Write `tests/smoke/test_imports.py`. We use `importlib.import_module()` rather than binding `from … import name` so static analysers don't flag unused imports (`# noqa: F401` only silences ruff/flake8, not Pyright) and so the test expresses its intent cleanly: "load this module by dotted name and don't crash". On failure, `importlib` reports the offending module name precisely.
+
 ```python
 """Import smoke test.
 
@@ -150,29 +154,32 @@ cannot accidentally break the orchestrator's imports. After the refactor, the
 later tasks of this same sub-project.
 """
 
+import importlib
+
 
 def test_bronze_scrapers_importable():
-    from bronze import (  # noqa: F401
-        arboretum,
-        carragh,
-        common,
-        gardens4you,
-        quickcrop,
-        rhs,
-        rhs_urls,
-        tullys,
-    )
+    for name in (
+        "bronze.arboretum",
+        "bronze.carragh",
+        "bronze.common",
+        "bronze.gardens4you",
+        "bronze.quickcrop",
+        "bronze.rhs",
+        "bronze.rhs_urls",
+        "bronze.tullys",
+    ):
+        importlib.import_module(name)
 
 
 def test_cloud_storage_importable():
-    import cloud_storage  # noqa: F401
+    cloud_storage = importlib.import_module("cloud_storage")
 
     assert hasattr(cloud_storage, "export_data_locally")
     assert hasattr(cloud_storage, "add_defaults_to_fields")
 
 
 def test_orchestrator_importable():
-    import load_bronze_data  # noqa: F401
+    importlib.import_module("load_bronze_data")
 ```
 
 - [ ] **Step 3: Run the smoke test to verify it passes**
@@ -273,16 +280,17 @@ from src.scrapers import tullys, quickcrop, gardens4you, carragh, arboretum, rhs
 Edit `tests/smoke/test_imports.py`. Replace the `test_bronze_scrapers_importable` function with:
 ```python
 def test_scrapers_importable():
-    from src.scrapers import (  # noqa: F401
-        arboretum,
-        carragh,
-        common,
-        gardens4you,
-        quickcrop,
-        rhs,
-        rhs_urls,
-        tullys,
-    )
+    for name in (
+        "src.scrapers.arboretum",
+        "src.scrapers.carragh",
+        "src.scrapers.common",
+        "src.scrapers.gardens4you",
+        "src.scrapers.quickcrop",
+        "src.scrapers.rhs",
+        "src.scrapers.rhs_urls",
+        "src.scrapers.tullys",
+    ):
+        importlib.import_module(name)
 ```
 
 Leave `test_cloud_storage_importable` and `test_orchestrator_importable` alone — they get updated in Task 5.
@@ -392,14 +400,17 @@ from src.common import storage as cloud_storage
 Edit `tests/smoke/test_imports.py`. Replace `test_cloud_storage_importable` with:
 ```python
 def test_storage_importable():
-    from src.common.storage import (  # noqa: F401
-        add_defaults_to_fields,
-        export_data_locally,
-    )
+    storage = importlib.import_module("src.common.storage")
+
+    assert callable(storage.export_data_locally)
+    assert callable(storage.add_defaults_to_fields)
 
 
 def test_storage_package_reexports():
-    from src.common import export_data_locally, add_defaults_to_fields  # noqa: F401
+    common = importlib.import_module("src.common")
+
+    assert callable(common.export_data_locally)
+    assert callable(common.add_defaults_to_fields)
 ```
 
 - [ ] **Step 8: Run the smoke test**
