@@ -1,0 +1,95 @@
+tullys:
+  display_name: "Tully's Nurseries"
+  base_url: https://shop.tullynurseries.ie
+  currency: EUR
+  vat_included: true
+  delivery_type: tiered
+  delivery_fees: []      # to be filled in from site
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: "Currently returning ASP.NET error pages — site may be abandoned."
+
+arboretum:
+  display_name: "Arboretum"
+  base_url: https://www.arboretum.ie
+  currency: EUR
+  vat_included: true
+  delivery_type: tiered
+  delivery_fees: []
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: ""
+
+carragh:
+  display_name: "Caragh Nurseries"
+  base_url: https://caraghnurseries.ie
+  currency: EUR
+  vat_included: true
+  delivery_type: tiered
+  delivery_fees: []
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: ""
+
+gardens4you:
+  display_name: "Gardens4You"
+  base_url: https://www.gardens4you.ie
+  currency: EUR
+  vat_included: true
+  delivery_type: flat
+  delivery_fees: [{ max_value_eur: null, fee_eur: 9.95 }]
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: ""
+
+quickcrop:
+  display_name: "QuickCrop Ireland"
+  base_url: https://www.quickcrop.ie
+  currency: EUR
+  vat_included: true
+  delivery_type: flat
+  delivery_fees: [{ max_value_eur: null, fee_eur: 7.95 }]
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: ""
+
+farmer_gracy:
+  display_name: "Farmer Gracy"
+  base_url: https://www.farmergracy.co.uk
+  currency: GBP
+  vat_included: true
+  delivery_type: flat
+  delivery_fees: [{ max_value_eur: null, fee_eur: 6.95 }]
+  min_order_eur: 0
+  runs_on: self-hosted    # Shopify, possibly Cloudflare-protected — verify
+  ships_live_plants_to_ireland: true
+  notes: "Specialises in bare-root, often cheapest. UK shipper, GBP pricing."
+
+bulbi:
+  display_name: "Bulbi.nl"
+  base_url: https://www.bulbi.nl
+  currency: EUR
+  vat_included: false
+  delivery_type: tiered
+  delivery_fees: []
+  min_order_eur: 25
+  runs_on: self-hosted
+  ships_live_plants_to_ireland: true
+  notes: "VAT may apply on import to Ireland. Bulbs and perennials."
+
+greengardenflowerbulbs:
+  display_name: "GreenGardenFlowerBulbs.nl"
+  base_url: https://www.greengardenflowerbulbs.nl
+  currency: EUR
+  vat_included: false
+  delivery_type: tiered
+  delivery_fees: []
+  min_order_eur: 50
+  runs_on: self-hosted
+  ships_live_plants_to_ireland: true
+  notes: "Bulk bulbs. No VAT shown at checkout. Min order applies."
