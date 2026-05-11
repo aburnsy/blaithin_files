@@ -17,6 +17,7 @@ strips them from the canonical name and we never see them.
 from __future__ import annotations
 
 import re
+from functools import lru_cache
 
 import pygnparser
 
@@ -34,6 +35,7 @@ _CULTIVAR_RE = re.compile(r"['‘’]([^'‘’]+)['‘’]")
 _GROUP_RE = re.compile(r"\(([^)]+\bGroup\b)\)")
 
 
+@lru_cache(maxsize=10_000)
 def parse(name: str) -> ParsedName:
     """Parse a botanical name string.
 
@@ -42,6 +44,10 @@ def parse(name: str) -> ParsedName:
 
     Raises :class:`ParseFailed` if the name cannot be resolved to at least a
     genus + species binomial (cardinality < 2 or gnparser fails to parse).
+
+    LRU-cached to avoid hammering the gnparser network API on repeated lookups
+    of the same product name (common across nursery sites and within a single
+    matching run). ParsedName is frozen so it's safe to share.
     """
     result = pygnparser.gnparser(name)
 
