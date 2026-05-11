@@ -88,3 +88,55 @@ def run_matching(
         })
 
     return pl.DataFrame(out_rows)
+
+
+def run_with_llm_fallback(
+    products_df: pl.DataFrame,
+    rhs_df: pl.DataFrame,
+    *,
+    llm_enabled: bool = True,
+    api_key: str | None = None,
+) -> pl.DataFrame:
+    """Run deterministic pipeline; LLM-resolve any residual; persist overrides; re-apply.
+
+    This is the production entry point. The deterministic pipeline is also useful in
+    isolation for fast offline test runs.
+    """
+
+    from src.matching.llm import batch_resolve
+    from src.matching.overrides import load_overrides, save_overrides
+
+    overrides = load_overrides()
+    matched = run_matching(products_df, rhs_df, overrides=overrides)
+
+    if not llm_enabled:
+        return matched
+
+    unmatched = matched.filter(pl.col("match_method") == "unmatched")
+    if len(unmatched) == 0:
+        return matched
+
+    # Build a candidate dict of all RHS records (the LLM picks among them).
+    # In production this should be narrowed to top-N rapidfuzz candidates per product
+    # to keep the cached prefix small; v1 sends them all.
+    id_col = "rhs_id" if "rhs_id" in rhs_df.columns else "id"
+    rhs_candidates = {
+        row[id_col]: {
+            "genus": (row["botanical_name"] or "").split(" ")[0] if row["botanical_name"] else "",
+            "species": (row["botanical_name"] or "").split(" ")[1].strip("'\"") if row["botanical_name"] and " " in row["botanical_name"] else "",
+            "common_names": [row["common_name"]] if row.get("common_name") else [],
+            "synonyms": row.get("synonyms") or [],
+        }
+        for row in rhs_df.iter_rows(named=True)
+    }
+
+    new_overrides = batch_resolve(
+        unmatched.select("product_name_clean").to_series().to_list(),
+        rhs_candidates,
+        api_key=api_key,
+    )
+
+    save_overrides(overrides + new_overrides)
+
+    # Re-run the deterministic pipeline so the new overrides flow through
+    return run_matching(products_df, rhs_df, overrides=overrides + new_overrides)
