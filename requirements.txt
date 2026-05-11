@@ -11,3 +11,6 @@ httpx
 pygnparser
 rapidfuzz
 anthropic
+tenacity
+structlog
+pytest-recording
