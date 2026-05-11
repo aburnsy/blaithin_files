@@ -23,11 +23,18 @@ def test_scrapers_importable():
         importlib.import_module(name)
 
 
-def test_cloud_storage_importable():
-    cloud_storage = importlib.import_module("cloud_storage")
+def test_storage_importable():
+    storage = importlib.import_module("src.common.storage")
 
-    assert hasattr(cloud_storage, "export_data_locally")
-    assert hasattr(cloud_storage, "add_defaults_to_fields")
+    assert callable(storage.export_data_locally)
+    assert callable(storage.add_defaults_to_fields)
+
+
+def test_storage_package_reexports():
+    common = importlib.import_module("src.common")
+
+    assert callable(common.export_data_locally)
+    assert callable(common.add_defaults_to_fields)
 
 
 def test_orchestrator_importable():

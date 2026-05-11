@@ -1,7 +1,7 @@
 #! .venv/Scripts/python.exe
 
 import argparse
-import cloud_storage
+from src.common.storage import export_data_locally
 from src.scrapers import tullys, quickcrop, gardens4you, carragh, arboretum, rhs_urls, rhs
 import polars as pl
 import pyarrow.dataset as ds
@@ -10,27 +10,27 @@ import pyarrow.dataset as ds
 def main(params):
     match params.site:
         case "tullys":
-            cloud_storage.export_data_locally(
+            export_data_locally(
                 table=tullys.get_product_data(),
             )
         case "quickcrop":
-            cloud_storage.export_data_locally(
+            export_data_locally(
                 table=quickcrop.get_product_data(),
             )
         case "gardens4you":
-            cloud_storage.export_data_locally(
+            export_data_locally(
                 table=gardens4you.get_product_data(),
             )
         case "carragh":
-            cloud_storage.export_data_locally(
+            export_data_locally(
                 table=carragh.get_product_data(),
             )
         case "arboretum":
-            cloud_storage.export_data_locally(
+            export_data_locally(
                 table=arboretum.get_product_data(),
             )
         case "rhs_urls":
-            cloud_storage.export_data_locally(
+            export_data_locally(
                 table=rhs_urls.get_plant_urls(),
                 dated=False,
             )
@@ -41,13 +41,13 @@ def main(params):
             )
 
         case _:
-            cloud_storage.export_data_locally(
+            export_data_locally(
                 table=carragh.get_product_data(),
             )
-            cloud_storage.export_data_locally(table=tullys.get_product_data())
-            cloud_storage.export_data_locally(table=quickcrop.get_product_data())
-            cloud_storage.export_data_locally(table=gardens4you.get_product_data())
-            cloud_storage.export_data_locally(
+            export_data_locally(table=tullys.get_product_data())
+            export_data_locally(table=quickcrop.get_product_data())
+            export_data_locally(table=gardens4you.get_product_data())
+            export_data_locally(
                 table=arboretum.get_product_data(),
             )
 
