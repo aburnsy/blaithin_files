@@ -77,12 +77,13 @@ Plus surfacing problems: no flagging of non-plant SKUs (compost, tools, pots), n
 | # | Sub-project | Approx. days | Unblocks |
 |---|---|---|---|
 | 0 | Repo consolidation | 1 | All |
+| R | Nursery research (vetted candidate list) | 0.5 (one-off, but maintained) | 1 |
 | 2 | Matching v2 + data model | 4–6 | 1, 3 (defines schema) |
 | 1 | Scraping hardening + new sites | 5–8 | 3, 4 |
 | 3 | Dashboard | 4–6 | 4 |
 | 4 | Observability + tests + CI | 2 | — |
 
-Total: **~3–4 weeks** focused work. Sub-project 1 is largest because of three new nurseries plus base hardening.
+Total: **~3–4 weeks** focused work. Sub-project 1 is largest because of new-nursery scrapers (count determined by §5.5 research output) plus base hardening. Sub-project R runs in parallel with sub-project 0.
 
 ---
 
@@ -114,6 +115,35 @@ Total: **~3–4 weeks** focused work. Sub-project 1 is largest because of three 
 6. Update `requirements.txt` (will grow significantly in later sub-projects).
 
 **Success criteria:** `python -m src.scrapers.tullys` (or equivalent) runs and writes a parquet, behaving identically to today.
+
+---
+
+## 5.5 Sub-project R — Nursery research
+
+**Outcome:** a maintained markdown directory of online nurseries that ship to Ireland, used to drive selection of which sites to scrape next. Lives at `docs/research/nurseries-ireland-shipping.md` and is referenced from this spec.
+
+**What it captures, per nursery:**
+
+- Name, URL, country, currency.
+- Specialty (bare-root, bulbs, roses, hedging, perennials, vegetables, indoor, etc.).
+- **Ships to Ireland** — yes / no / restricted (Brexit phytosanitary rules mean many UK nurseries now only ship seeds, bulbs, or dormant material, not live potted plants — recorded explicitly per nursery).
+- Delivery cost, min order, VAT applicability.
+- Value reputation (cheap / mid / premium) with one-line reason.
+- Anti-bot risk if visible (Cloudflare? Shopify? plain WooCommerce?) — informs the runner-profile decision in §10.
+- Notes (sales calendar, bare-root season, awards).
+
+**Initial pass:** the user has named three additions explicitly (Farmer Gracy, Bulbi.nl, GreenGardenFlowerBulbs.nl). The research pass adds a comprehensive set of additional candidates across IE/UK/EU and per specialty.
+
+**Selection criterion for sub-project 1:** scrape priority = `(value_reputation × delivery_to_ireland_quality × anti_bot_risk_inverse)`. We do not commit to scraping all candidates — the directory is a menu. New scrapers can be added incrementally after sub-project 1's `BaseScraper` foundation is in place; each new nursery is a small, well-scoped PR.
+
+**Maintenance:** the file is a living document. When a nursery starts/stops shipping to Ireland, or pricing/delivery changes materially, the research file gets updated. Stale entries (>12 months unchecked) get re-verified.
+
+**Success criteria:**
+
+- ≥ 30 nurseries reviewed across IE/UK/EU.
+- Every entry has a verified "ships to Ireland" status.
+- Specialty index lets a reader find "best for bare-root hedging" or "best for bulbs in bulk" in one lookup.
+- The list of sites we actually scrape in sub-project 1 is justified by reference to this file.
 
 ---
 
@@ -325,15 +355,17 @@ Each existing scraper rewritten on top of `BaseScraper`. Order (worst first):
 
 Each scraper grows a `prefer_url_botanical_name()` method (per Q2 / B2) that tries to extract the structured botanical name from URL slug or a dedicated page field before falling back to the title — significantly improves matching upstream.
 
-### 7.3 New nurseries (per Q7)
+### 7.3 New nurseries (per Q7 + sub-project R)
 
-Three to add. Each gets its own scraper file + entry in `config/nurseries.yaml`:
+Three explicit additions from Q7:
 
 - **Farmer Gracy** (`farmer_gracy.py`) — Shopify-based, GBP. Bare-root specialist. Currency conversion to EUR via cached ECB rate.
 - **Bulbi.nl** (`bulbi.py`) — bulbs and perennials. NL site, EUR. VAT may not be included for Ireland buyers — flag in nursery config.
 - **GreenGardenFlowerBulbs.nl** (`greengardenflowerbulbs.py`) — bulk bulbs. NL site, EUR, no VAT, min order. Flag both in config.
 
-For each: probe the site once to confirm anti-bot behaviour (see §10). If Cloudflare-protected, route through a self-hosted runner.
+**Plus:** a prioritised subset from `docs/research/nurseries-ireland-shipping.md` (sub-project R). The exact selection is made when sub-project R completes, picking the top candidates by value-reputation × Ireland-shipping-quality × low-anti-bot-risk. Targeting **5–10 additional nurseries** in the v1 push, with the remainder available as incremental adds post-MVP.
+
+For each: probe the site once to confirm anti-bot behaviour (see §10). If Cloudflare-protected, route through a self-hosted runner. New nursery additions after the v1 push are small, well-scoped PRs against the established `BaseScraper` foundation.
 
 ### 7.4 Test fixtures
 
@@ -451,6 +483,8 @@ These are decisions I made without explicit input — flag any you want to redir
 5. **Self-hosted runner location:** your home PC or a VPS? PC = free but needs to be on for nightly cron. VPS = €5/mo, always-on.
 6. **First nursery to rewrite as the BaseScraper exemplar:** I picked `gardens4you` (worst). Want to redirect to a different one?
 7. **Existing dashboard URL:** the Looker Studio dashboard at `004c1328-...` will be deprecated. Anyone else using it that needs warning?
+8. **New-nursery cap for v1:** I propose 5–10 additional nurseries from sub-project R's research output, on top of the three you named. Hard cap, soft cap, or "as many as the research finds worth doing"?
+9. **UK seed/bulb-only nurseries:** post-Brexit many UK nurseries only ship dormant material to IE (no live plants). Worth scraping for the things they CAN ship (often the cheapest seeds/bulbs), or skip to keep the data model simpler? I propose include with a `live_plants_to_ireland: false` flag in nursery config so the dashboard can show "seeds and bulbs only — not live plants" badges.
 
 ---
 
