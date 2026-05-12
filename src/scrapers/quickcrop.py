@@ -252,7 +252,10 @@ def parse_url(URL: str, category: str, driver: webdriver) -> list[dict]:
         products = content.find("ul", class_="productGrid").find_all("li")
 
         for product in products:
-            product_url = product.find("h2", class_="card-title").a["href"]
+            card_title = product.find(class_="card-title")
+            if card_title is None or card_title.a is None:
+                continue
+            product_url = card_title.a["href"]
 
             price_inc_vat_str = product.find("span", class_="price price--withTax").text
             if "-" in price_inc_vat_str:

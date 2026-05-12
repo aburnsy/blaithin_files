@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import importlib
 import re
-import time
 
 from bs4 import BeautifulSoup
 from requests_html import HTMLSession
@@ -9,9 +8,11 @@ from selenium import webdriver
 from selenium.common.exceptions import (
     NoSuchElementException,
     StaleElementReferenceException,
+    TimeoutException,
 )
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import Select
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import Select, WebDriverWait
 
 
 def selenium_setup() -> webdriver:
@@ -111,28 +112,35 @@ def fetch_data_interactive(
                 )
                 continue
 
-            # Sleeping here instead of waiting. The data is stored in browser in a form, so no round trips are required.
-            # Because of how prices are displayed, its hard to verify that the prices etc are ready for consumption
-            time.sleep(0.3)
-
+            # The woocommerce-variation div is empty in the static HTML; WooCommerce
+            # JS populates it (with a <bdi> price element) asynchronously after the
+            # option is selected. Wait for the bdi to appear instead of sleeping.
+            variation_price_xpath = (
+                '//div[contains(@class,"woocommerce-variation") and '
+                'contains(@class,"single_variation")]//bdi'
+            )
             try:
-                price = (
-                    driver.find_element(
-                        By.XPATH,
-                        '//div[@class="woocommerce-variation single_variation"]',
-                    )
-                    .find_element(By.TAG_NAME, "bdi")
-                    .get_attribute("innerText")
+                price_el = WebDriverWait(driver, 10).until(
+                    EC.visibility_of_element_located((By.XPATH, variation_price_xpath))
                 )
-            except NoSuchElementException:
-                prices = driver.find_elements(
-                    By.XPATH, '//span[@class="woocommerce-Price-amount amount"]'
-                )
-                for price in prices:
-                    p = price.find_element(By.TAG_NAME, "bdi")
-                    if p.is_displayed():
-                        price = p.get_attribute("innerText")
+                price = price_el.get_attribute("innerText")
+            except TimeoutException:
+                # Fallback: some variations render their price elsewhere (e.g. the
+                # main product-summary block). Pick the first visible bdi anywhere
+                # under a Price-amount span.
+                price = None
+                for bdi in driver.find_elements(
+                    By.XPATH,
+                    '//span[contains(@class,"woocommerce-Price-amount")]//bdi',
+                ):
+                    if bdi.is_displayed():
+                        price = bdi.get_attribute("innerText")
                         break
+                if price is None:
+                    print(
+                        f"No price for {option_value} on {product_url}. Skipping."
+                    )
+                    continue
             price_inc_vat = extract_price_from_text(price)
 
             try:
