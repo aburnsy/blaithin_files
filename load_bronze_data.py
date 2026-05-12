@@ -29,6 +29,7 @@ from src.scrapers import (
     rhs,
     rhs_urls,
     tullys,
+    windyridge,
 )
 
 # Single source of truth for "nurseries we currently scrape". Pulled from
@@ -156,6 +157,10 @@ def main(params):
         case "future_forests":
             export_data_locally(
                 table=future_forests.get_product_data(),
+            )
+        case "windyridge":
+            export_data_locally(
+                table=windyridge.get_product_data(),
             )
         case "rhs_urls":
             export_data_locally(

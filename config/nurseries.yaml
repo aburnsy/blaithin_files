@@ -225,3 +225,15 @@ future_forests:
   runs_on: github-actions
   ships_live_plants_to_ireland: true
   notes: "West Cork trees/hedging/fruit Shopify shop; €15–€75 zoned delivery."
+
+windyridge:
+  display_name: "Windyridge Garden Centre"
+  base_url: https://www.windyridgegardencentre.ie
+  currency: EUR
+  vat_included: true
+  delivery_type: tiered
+  delivery_fees: []
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: "Dún Laoghaire family-run Shopify shop."
