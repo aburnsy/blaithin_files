@@ -249,3 +249,15 @@ beattys:
   runs_on: github-actions
   ships_live_plants_to_ireland: true
   notes: "Galway hardware+garden Shopify shop; resells Suttons & T&M seeds."
+
+plant_store:
+  display_name: "Plant Store"
+  base_url: https://www.plantstore.ie
+  currency: EUR
+  vat_included: true
+  delivery_type: tiered
+  delivery_fees: []
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: "Irish indoor-plant Shopify shop; B2B + retail."

@@ -25,6 +25,7 @@ from src.scrapers import (
     hedgingie,
     howbert_mays,
     newlands,
+    plant_store,
     plantgift,
     quickcrop,
     rhs,
@@ -166,6 +167,10 @@ def main(params):
         case "beattys":
             export_data_locally(
                 table=beattys.get_product_data(),
+            )
+        case "plant_store":
+            export_data_locally(
+                table=plant_store.get_product_data(),
             )
         case "rhs_urls":
             export_data_locally(
