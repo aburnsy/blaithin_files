@@ -21,8 +21,8 @@ if "OVERRIDES_PARQUET" in os.environ:
     import src.matching.overrides as overrides_mod
     overrides_mod.OVERRIDES_PARQUET = Path(os.environ["OVERRIDES_PARQUET"])
 
-from src.matching.models import MatchOverride
-from src.matching.overrides import load_overrides, upsert_override
+from src.matching.models import MatchOverride  # noqa: E402
+from src.matching.overrides import load_overrides, upsert_override  # noqa: E402
 
 
 def cmd_list(_args):

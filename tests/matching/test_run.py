@@ -1,11 +1,12 @@
 """Integration test: deterministic match pipeline against the fixture."""
 
 from pathlib import Path
+from unittest.mock import patch
 
 import polars as pl
 import pytest
 
-from src.matching.run import run_matching
+from src.matching.run import run_matching, run_with_llm_fallback
 
 RHS_FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "rhs_sample.parquet"
 
@@ -37,7 +38,7 @@ def products_df(rhs_df):
 
 def test_pipeline_matches_known_plants(rhs_df, products_df):
     matched = run_matching(products_df, rhs_df, overrides=[])
-    plant_rows = matched.filter(pl.col("is_plant") == True)
+    plant_rows = matched.filter(pl.col("is_plant").eq(True))
     # Most of the 20 fixture-derived plants should match (some may have weird formatting)
     matched_count = plant_rows.filter(pl.col("rhs_id").is_not_null()).height
     assert matched_count >= 15, f"Expected ≥15 of 20 to match, got {matched_count}"
@@ -45,17 +46,12 @@ def test_pipeline_matches_known_plants(rhs_df, products_df):
 
 def test_pipeline_classifies_non_plants(rhs_df, products_df):
     matched = run_matching(products_df, rhs_df, overrides=[])
-    non_plant_rows = matched.filter(pl.col("is_plant") == False)
+    non_plant_rows = matched.filter(pl.col("is_plant").eq(False))
     assert len(non_plant_rows) >= 3
     categories = set(non_plant_rows.select("product_category").to_series().to_list())
     assert "compost" in categories
     assert "tool" in categories
     assert "pot" in categories
-
-
-from unittest.mock import patch
-
-from src.matching.run import run_with_llm_fallback
 
 
 @patch("src.matching.llm.Anthropic")

@@ -50,17 +50,10 @@ def extract_detailed_plant_data(plant: dict, plant_content) -> dict:
         print(f"Cannot find description for plant {plant_url}")
         description = None
 
-    try:
-        plant_content.find("img", attrs={"alt": "RHS AGM"}).text
-        is_rhs_award_winner = True
-    except AttributeError:
-        is_rhs_award_winner = False
-
-    try:
-        plant_content.find("img", attrs={"alt": "RHS Plants for pollinators"}).text
-        is_pollinator_plant = True
-    except AttributeError:
-        is_pollinator_plant = False
+    is_rhs_award_winner = plant_content.find("img", attrs={"alt": "RHS AGM"}) is not None
+    is_pollinator_plant = (
+        plant_content.find("img", attrs={"alt": "RHS Plants for pollinators"}) is not None
+    )
 
     # Size, Growing Conditions, Colour&Scent, Position
     for plant_attributes_panel in plant_content.find_all(
@@ -171,7 +164,7 @@ def extract_detailed_plant_data(plant: dict, plant_content) -> dict:
         i += 1
 
     bottom_panel_dict = {}
-    for key, value in zip(bottom_panel[0::2], bottom_panel[1::2]):
+    for key, value in zip(bottom_panel[0::2], bottom_panel[1::2], strict=False):
         bottom_panel_dict[key] = value
     try:  # Example https://www.rhs.org.uk/plants/78738/blackstonia-perfoliata/details
         foliage = [
@@ -224,7 +217,7 @@ def get_plants_detail(plants: list[dict]) -> None:
         os.mkdir("data\\rhs")
     for plant in plants:
         plant_url = plant["plant_url"]
-        file_name = f"data\\rhs\\{plant["id"]}.parquet"
+        file_name = f"data\\rhs\\{plant['id']}.parquet"
         if os.path.isfile(file_name):
             continue
         if (plant_page := session.get(plant_url)).status_code != 200:
@@ -237,7 +230,7 @@ def get_plants_detail(plants: list[dict]) -> None:
             )
         except Exception:
             try:
-                print(f"Trying Selenium {plant["plant_url"]}")
+                print(f"Trying Selenium {plant['plant_url']}")
                 driver.get(plant_url)
                 WebDriverWait(driver, 100).until(ScrollToBottom(driver, 2))
                 extract = extract_detailed_plant_data(
@@ -247,7 +240,7 @@ def get_plants_detail(plants: list[dict]) -> None:
 
             except Exception:
                 traceback.print_exc()
-                print(f"ERROR Could not fetch data for {plant["plant_url"]}")
+                print(f"ERROR Could not fetch data for {plant['plant_url']}")
                 continue
 
         df = pl.DataFrame([extract])

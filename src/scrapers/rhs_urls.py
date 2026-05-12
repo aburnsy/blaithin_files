@@ -31,7 +31,9 @@ plant_type_mapping = {
 }
 
 
-def get_plant_urls(plant_types: list = range(1, 22)):
+def get_plant_urls(plant_types: list | None = None):
+    if plant_types is None:
+        plant_types = list(range(1, 22))
     URL = "https://lwapp-uks-prod-psearch-01.azurewebsites.net/api/v1/plants/search/advanced"
     headers = {"Accept": "application/json", "Content-Type": "application/json"}
     page_size = 1000
