@@ -20,8 +20,10 @@ def export_data_locally(table: list[dict] | None, dated: bool = True) -> None:
         print("Scraper returned no data; skipping parquet write.")
         return
 
-    # Easiest to use Polars to convert a list of dictionaries into a DF/Table
-    df = pl.DataFrame(table)
+    # Easiest to use Polars to convert a list of dictionaries into a DF/Table.
+    # ``infer_schema_length=None`` scans all rows so a column that's None for
+    # the first ~100 rows and a string later doesn't crash schema inference.
+    df = pl.DataFrame(table, infer_schema_length=None)
     source = df.select(pl.first("source")).item()
 
     if dated:

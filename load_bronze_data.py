@@ -12,6 +12,7 @@ from src.common.nurseries import scraped_nursery_slugs
 from src.common.storage import export_data_locally
 from src.scrapers import (
     arboretum,
+    ballyrobert,
     carragh,
     david_austin,
     gardens4you,
@@ -111,6 +112,10 @@ def main(params):
         case "david_austin":
             export_data_locally(
                 table=david_austin.get_product_data(),
+            )
+        case "ballyrobert":
+            export_data_locally(
+                table=ballyrobert.get_product_data(),
             )
         case "rhs_urls":
             export_data_locally(

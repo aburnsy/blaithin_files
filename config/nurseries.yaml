@@ -117,3 +117,15 @@ david_austin:
   runs_on: github-actions
   ships_live_plants_to_ireland: true
   notes: "MUST use eu.davidaustinroses.com — .com does not ship to IE."
+
+ballyrobert:
+  display_name: "Ballyrobert Gardens"
+  base_url: https://www.ballyrobertgardens.com
+  currency: GBP
+  vat_included: true
+  delivery_type: flat
+  delivery_fees: [{ max_value_eur: null, fee_eur: 5.99 }]
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: "Northern Ireland Shopify store; £5.99 flat, free over £200; RHS Partner Garden."
