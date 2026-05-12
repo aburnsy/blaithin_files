@@ -13,7 +13,15 @@ from selenium.webdriver.support.ui import Select, WebDriverWait
 
 
 def selenium_setup() -> webdriver:
-    driver = webdriver.Chrome()
+    from selenium.webdriver.chrome.options import Options
+
+    opts = Options()
+    opts.add_argument("--headless=new")
+    opts.add_argument("--no-sandbox")
+    opts.add_argument("--disable-dev-shm-usage")
+    opts.add_argument("--disable-gpu")
+    opts.add_argument("--window-size=1400,900")
+    driver = webdriver.Chrome(options=opts)
     driver.get("https://www.quickcrop.ie")
     try:
         WebDriverWait(driver, 5).until(

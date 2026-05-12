@@ -116,8 +116,15 @@ def fetch_data(
 
 
 def selenium_setup() -> webdriver:
-    driver = webdriver.Chrome()
-    return driver
+    from selenium.webdriver.chrome.options import Options
+
+    opts = Options()
+    opts.add_argument("--headless=new")
+    opts.add_argument("--no-sandbox")
+    opts.add_argument("--disable-dev-shm-usage")
+    opts.add_argument("--disable-gpu")
+    opts.add_argument("--window-size=1400,900")
+    return webdriver.Chrome(options=opts)
 
 
 def parse_url(URL: str, category: str, driver: webdriver) -> list[dict]:
