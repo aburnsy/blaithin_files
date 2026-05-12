@@ -165,3 +165,15 @@ howbert_mays:
   runs_on: github-actions
   ships_live_plants_to_ireland: true
   notes: "Dublin garden/homeware retailer (Monkstown / Clare St / Dundrum)."
+
+newlands:
+  display_name: "Newlands Garden Centre"
+  base_url: https://www.newlands.ie
+  currency: EUR
+  vat_included: true
+  delivery_type: tiered
+  delivery_fees: []
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: "Dublin full-range garden centre; David Austin reseller; aquatics specialist."
