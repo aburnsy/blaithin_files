@@ -23,6 +23,7 @@ from src.scrapers import (
     hedgingie,
     howbert_mays,
     newlands,
+    plantgift,
     quickcrop,
     rhs,
     rhs_urls,
@@ -146,6 +147,10 @@ def main(params):
         case "fluwel":
             export_data_locally(
                 table=fluwel.get_product_data(),
+            )
+        case "plantgift":
+            export_data_locally(
+                table=plantgift.get_product_data(),
             )
         case "rhs_urls":
             export_data_locally(

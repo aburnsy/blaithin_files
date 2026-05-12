@@ -201,3 +201,15 @@ fluwel:
   runs_on: github-actions
   ships_live_plants_to_ireland: true
   notes: "NL premium-bulb specialist; €33.25 flat to IE; >20kg parcels."
+
+plantgift:
+  display_name: "PlantGift.ie"
+  base_url: https://plantgift.ie
+  currency: EUR
+  vat_included: true
+  delivery_type: free
+  delivery_fees: []
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: "Free shipping all orders (claimed); 500+ varieties from EU growers."
