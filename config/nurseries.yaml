@@ -66,9 +66,9 @@ farmer_gracy:
   delivery_type: flat
   delivery_fees: [{ max_value_eur: null, fee_eur: 6.95 }]
   min_order_eur: 0
-  runs_on: self-hosted    # Shopify, possibly Cloudflare-protected — verify
+  runs_on: github-actions
   ships_live_plants_to_ireland: true
-  notes: "Specialises in bare-root, often cheapest. UK shipper, GBP pricing."
+  notes: "UK→NL bulb specialist; Shopify /products.json works without anti-bot."
 
 bulbi:
   display_name: "Bulbi.nl"

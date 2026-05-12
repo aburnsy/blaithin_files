@@ -20,6 +20,7 @@ from src.scrapers import (
     connecting_to_nature,
     david_austin,
     dutchgrown,
+    farmer_gracy,
     fluwel,
     future_forests,
     gardens4you,
@@ -186,6 +187,10 @@ def main(params):
         case "mid_ulster":
             export_data_locally(
                 table=mid_ulster.get_product_data(),
+            )
+        case "farmer_gracy":
+            export_data_locally(
+                table=farmer_gracy.get_product_data(),
             )
         case "rhs_urls":
             export_data_locally(
