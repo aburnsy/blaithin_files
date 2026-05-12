@@ -26,6 +26,7 @@ from src.scrapers import (
     hedgingie,
     hopeless_botanics,
     howbert_mays,
+    mid_ulster,
     newlands,
     plant_store,
     plantgift,
@@ -181,6 +182,10 @@ def main(params):
         case "bloombox":
             export_data_locally(
                 table=bloombox.get_product_data(),
+            )
+        case "mid_ulster":
+            export_data_locally(
+                table=mid_ulster.get_product_data(),
             )
         case "rhs_urls":
             export_data_locally(

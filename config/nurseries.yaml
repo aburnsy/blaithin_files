@@ -285,3 +285,15 @@ bloombox:
   runs_on: github-actions
   ships_live_plants_to_ireland: true
   notes: "Houseplant + subscription Shopify shop; .ie storefront priced in EUR."
+
+mid_ulster:
+  display_name: "Mid Ulster Garden Centre"
+  base_url: https://midulster.co.uk
+  currency: GBP
+  vat_included: true
+  delivery_type: tiered
+  delivery_fees: []
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: "Northern Ireland Shopify; ships ROI; stocks T&M seeds for IE customers."
