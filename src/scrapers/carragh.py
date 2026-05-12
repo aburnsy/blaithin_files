@@ -11,7 +11,6 @@ from selenium.common.exceptions import (
     TimeoutException,
 )
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select, WebDriverWait
 
 
@@ -28,6 +27,19 @@ def selenium_setup() -> webdriver:
 
 
 numeric_pattern_compiled = re.compile(r"(\d+)")
+
+_VARIATION_PRICE_JS = (
+    "var b = document.querySelector("
+    "'div.woocommerce-variation.single_variation bdi'); "
+    "return b ? b.innerText.trim() : '';"
+)
+_FALLBACK_PRICE_JS = (
+    "var nodes = document.querySelectorAll('span.woocommerce-Price-amount bdi'); "
+    "for (var n of nodes) {"
+    "  if (n.offsetParent !== null && n.innerText.trim()) "
+    "    return n.innerText.trim();"
+    "} return '';"
+)
 
 
 def extract_price_from_text(price_str):
@@ -110,29 +122,18 @@ def fetch_data_interactive(
 
         # The woocommerce-variation div is empty in the static HTML; WooCommerce
         # JS populates it (with a <bdi> price element) asynchronously after the
-        # option is selected. Wait for the bdi to appear instead of sleeping.
-        variation_price_xpath = (
-            '//div[contains(@class,"woocommerce-variation") and '
-            'contains(@class,"single_variation")]//bdi'
-        )
+        # option is selected. Read the price via execute_script so we don't
+        # hold a WebElement reference that can go stale across the re-render.
         try:
-            price_el = WebDriverWait(driver, 10).until(
-                EC.visibility_of_element_located((By.XPATH, variation_price_xpath))
+            price = WebDriverWait(driver, 10).until(
+                lambda d: d.execute_script(_VARIATION_PRICE_JS) or False
             )
-            price = price_el.get_attribute("innerText")
         except TimeoutException:
-            # Fallback: some variations render their price elsewhere (e.g. the
-            # main product-summary block). Pick the first visible bdi anywhere
-            # under a Price-amount span.
-            price = None
-            for bdi in driver.find_elements(
-                By.XPATH,
-                '//span[contains(@class,"woocommerce-Price-amount")]//bdi',
-            ):
-                if bdi.is_displayed():
-                    price = bdi.get_attribute("innerText")
-                    break
-            if price is None:
+            # Fallback: variations sometimes render their price outside the
+            # single_variation block — take the first visible bdi inside any
+            # woocommerce-Price-amount span.
+            price = driver.execute_script(_FALLBACK_PRICE_JS)
+            if not price:
                 print(
                     f"No price for {option_value} on {product_url}. Skipping."
                 )
