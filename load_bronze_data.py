@@ -28,6 +28,7 @@ from src.scrapers import (
     hopeless_botanics,
     howbert_mays,
     mid_ulster,
+    mount_venus,
     newlands,
     plant_store,
     plantgift,
@@ -191,6 +192,10 @@ def main(params):
         case "farmer_gracy":
             export_data_locally(
                 table=farmer_gracy.get_product_data(),
+            )
+        case "mount_venus":
+            export_data_locally(
+                table=mount_venus.get_product_data(),
             )
         case "rhs_urls":
             export_data_locally(

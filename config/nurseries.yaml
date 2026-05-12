@@ -297,3 +297,15 @@ mid_ulster:
   runs_on: github-actions
   ships_live_plants_to_ireland: true
   notes: "Northern Ireland Shopify; ships ROI; stocks T&M seeds for IE customers."
+
+mount_venus:
+  display_name: "Mount Venus Nursery"
+  base_url: https://mountvenusnursery.com
+  currency: EUR
+  vat_included: true
+  delivery_type: flat
+  delivery_fees: [{ max_value_eur: null, fee_eur: 10 }]
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: "Dublin 16 specialist-perennial WooCommerce; mail order Oct–Apr; An Post €10/box."
