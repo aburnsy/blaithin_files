@@ -333,3 +333,15 @@ hedges_direct:
   runs_on: github-actions
   ships_live_plants_to_ireland: true
   notes: "Irish hedging WooCommerce; whitethorn from €0.80; nationwide delivery."
+
+famous_roses:
+  display_name: "Famous Roses World"
+  base_url: https://en.famousroses.eu
+  currency: EUR
+  vat_included: true
+  delivery_type: tiered
+  delivery_fees: []
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: "RO/EU rose specialist Shopify shop; bare-root + potted; courier rates."
