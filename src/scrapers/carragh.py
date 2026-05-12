@@ -42,30 +42,22 @@ def fetch_data_interactive(
 
     driver.get(product_url)
 
-    try:
-        select_element = driver.find_element(By.XPATH, '//select[@id="pa_pot-size"]')
-    except NoSuchElementException:
+    select_xpath = None
+    for candidate in (
+        '//select[@id="pa_pot-size"]',
+        '//select[@id="pa_variation"]',
+        '//select[@id="pa_size"]',
+        '//select[@id="pa_colour"]',
+    ):
         try:
-            select_element = driver.find_element(
-                By.XPATH, '//select[@id="pa_variation"]'
-            )
+            select_element = driver.find_element(By.XPATH, candidate)
+            select_xpath = candidate
+            break
         except NoSuchElementException:
-            try:
-                select_element = driver.find_element(
-                    By.XPATH, '//select[@id="pa_size"]'
-                )
-            except NoSuchElementException:
-                try:
-                    select_element = driver.find_element(
-                        By.XPATH, '//select[@id="pa_colour"]'
-                    )
-                except NoSuchElementException:
-                    print(
-                        f"Error fetching data for {product_url}. No dropdown options found."
-                    )
-                    return None
-
-    select = Select(select_element)
+            continue
+    if select_xpath is None:
+        print(f"Error fetching data for {product_url}. No dropdown options found.")
+        return None
 
     product_name = driver.find_element(
         By.XPATH, '//h1[@class="product_title entry-title"]'
@@ -97,81 +89,85 @@ def fetch_data_interactive(
         except NoSuchElementException:
             description = None
 
-    for option_value, option_name in [
-        (option.get_attribute("value"), option.get_attribute("innerText"))
-        for option in select_element.find_elements(By.TAG_NAME, "option")
-    ]:
-        if option_value == "Choose an option" or option_value == "":
+    # Snapshot all option values up front — the select itself may be re-rendered
+    # by WooCommerce after each selection, so the element list can go stale.
+    option_pairs: list[tuple[str, str]] = []
+    for option in select_element.find_elements(By.TAG_NAME, "option"):
+        value = option.get_attribute("value")
+        name = option.get_attribute("innerText")
+        if value and value != "Choose an option":
+            option_pairs.append((value, name))
+
+    for option_value, option_name in option_pairs:
+        try:
+            fresh_select_element = driver.find_element(By.XPATH, select_xpath)
+            Select(fresh_select_element).select_by_value(option_value)
+        except (StaleElementReferenceException, NoSuchElementException):
+            print(
+                f"Skip option {option_value!r} (stale/missing). URL: {product_url}"
+            )
             continue
-        else:
-            try:
-                select.select_by_value(option_value)
-            except StaleElementReferenceException:
+
+        # The woocommerce-variation div is empty in the static HTML; WooCommerce
+        # JS populates it (with a <bdi> price element) asynchronously after the
+        # option is selected. Wait for the bdi to appear instead of sleeping.
+        variation_price_xpath = (
+            '//div[contains(@class,"woocommerce-variation") and '
+            'contains(@class,"single_variation")]//bdi'
+        )
+        try:
+            price_el = WebDriverWait(driver, 10).until(
+                EC.visibility_of_element_located((By.XPATH, variation_price_xpath))
+            )
+            price = price_el.get_attribute("innerText")
+        except TimeoutException:
+            # Fallback: some variations render their price elsewhere (e.g. the
+            # main product-summary block). Pick the first visible bdi anywhere
+            # under a Price-amount span.
+            price = None
+            for bdi in driver.find_elements(
+                By.XPATH,
+                '//span[contains(@class,"woocommerce-Price-amount")]//bdi',
+            ):
+                if bdi.is_displayed():
+                    price = bdi.get_attribute("innerText")
+                    break
+            if price is None:
                 print(
-                    f"Failed to select {option_value}. The site has re-rendered. URL: {product_url}"
+                    f"No price for {option_value} on {product_url}. Skipping."
                 )
                 continue
+        price_inc_vat = extract_price_from_text(price)
 
-            # The woocommerce-variation div is empty in the static HTML; WooCommerce
-            # JS populates it (with a <bdi> price element) asynchronously after the
-            # option is selected. Wait for the bdi to appear instead of sleeping.
-            variation_price_xpath = (
-                '//div[contains(@class,"woocommerce-variation") and '
-                'contains(@class,"single_variation")]//bdi'
-            )
-            try:
-                price_el = WebDriverWait(driver, 10).until(
-                    EC.visibility_of_element_located((By.XPATH, variation_price_xpath))
-                )
-                price = price_el.get_attribute("innerText")
-            except TimeoutException:
-                # Fallback: some variations render their price elsewhere (e.g. the
-                # main product-summary block). Pick the first visible bdi anywhere
-                # under a Price-amount span.
-                price = None
-                for bdi in driver.find_elements(
-                    By.XPATH,
-                    '//span[contains(@class,"woocommerce-Price-amount")]//bdi',
-                ):
-                    if bdi.is_displayed():
-                        price = bdi.get_attribute("innerText")
-                        break
-                if price is None:
-                    print(
-                        f"No price for {option_value} on {product_url}. Skipping."
-                    )
-                    continue
-            price_inc_vat = extract_price_from_text(price)
-
-            try:
-                stock_str = driver.find_element(
-                    By.XPATH, '//p[@class="stock in-stock"]'
-                ).get_attribute("innerText")
-                stock_search = re.search(numeric_pattern_compiled, stock_str)
-                if stock_search:
-                    stock = stock_search.group(0)
-                else:
-                    stock = 0
-            except NoSuchElementException:
+        try:
+            stock_str = driver.find_element(
+                By.XPATH, '//p[@class="stock in-stock"]'
+            ).get_attribute("innerText")
+            stock_search = re.search(numeric_pattern_compiled, stock_str)
+            if stock_search:
+                stock = stock_search.group(0)
+            else:
                 stock = 0
+        except NoSuchElementException:
+            stock = 0
 
-            # Leave as raw information - we will process this in silver layer
-            size = option_name
+        # Leave as raw information - we will process this in silver layer
+        size = option_name
 
-            results.append(
-                {
-                    "source": "carragh",
-                    "source_url": source_url,
-                    "product_url": product_url,
-                    "category": category,
-                    "product_name": product_name,
-                    "img_url": img_url,
-                    "description": description,
-                    "price": price_inc_vat,
-                    "size": size,
-                    "stock": stock,
-                }
-            )
+        results.append(
+            {
+                "source": "carragh",
+                "source_url": source_url,
+                "product_url": product_url,
+                "category": category,
+                "product_name": product_name,
+                "img_url": img_url,
+                "description": description,
+                "price": price_inc_vat,
+                "size": size,
+                "stock": stock,
+            }
+        )
     return results
 
 
