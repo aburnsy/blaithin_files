@@ -14,12 +14,15 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.11" }
+      - uses: browser-actions/setup-chrome@v1
+        if: matrix.site == 'quickcrop' || matrix.site == 'carragh' || matrix.site == 'arboretum' || matrix.site == 'tullys'
       - run: pip install -r requirements.txt
       - run: python load_bronze_data.py --site ${{ matrix.site }} || true
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.site }}
           path: data/${{ matrix.site }}/
+          if-no-files-found: error
   match-and-commit:
     needs: scrape
     runs-on: ubuntu-latest
