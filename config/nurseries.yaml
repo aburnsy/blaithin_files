@@ -141,3 +141,15 @@ brown_envelope:
   runs_on: github-actions
   ships_live_plants_to_ireland: true
   notes: "Organic open-pollinated seed (West Cork); free shipping over €50."
+
+connecting_to_nature:
+  display_name: "Connecting to Nature"
+  base_url: https://connectingtonature.ie
+  currency: EUR
+  vat_included: true
+  delivery_type: tiered
+  delivery_fees: []
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: "Waterford native wildflower/bird-food/hedging Shopify store."

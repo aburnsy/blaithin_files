@@ -15,6 +15,7 @@ from src.scrapers import (
     ballyrobert,
     brown_envelope,
     carragh,
+    connecting_to_nature,
     david_austin,
     gardens4you,
     hedgingie,
@@ -121,6 +122,10 @@ def main(params):
         case "brown_envelope":
             export_data_locally(
                 table=brown_envelope.get_product_data(),
+            )
+        case "connecting_to_nature":
+            export_data_locally(
+                table=connecting_to_nature.get_product_data(),
             )
         case "rhs_urls":
             export_data_locally(
