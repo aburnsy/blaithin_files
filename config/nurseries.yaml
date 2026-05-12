@@ -309,3 +309,15 @@ mount_venus:
   runs_on: github-actions
   ships_live_plants_to_ireland: true
   notes: "Dublin 16 specialist-perennial WooCommerce; mail order Oct–Apr; An Post €10/box."
+
+cullen:
+  display_name: "Cullen Nurseries"
+  base_url: https://cullennurseries.ie
+  currency: EUR
+  vat_included: true
+  delivery_type: tiered
+  delivery_fees: []
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: "Carlow native-tree/hedging WooCommerce; DAFM-approved."

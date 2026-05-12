@@ -18,6 +18,7 @@ from src.scrapers import (
     brown_envelope,
     carragh,
     connecting_to_nature,
+    cullen,
     david_austin,
     dutchgrown,
     farmer_gracy,
@@ -196,6 +197,10 @@ def main(params):
         case "mount_venus":
             export_data_locally(
                 table=mount_venus.get_product_data(),
+            )
+        case "cullen":
+            export_data_locally(
+                table=cullen.get_product_data(),
             )
         case "rhs_urls":
             export_data_locally(
