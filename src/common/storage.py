@@ -15,7 +15,11 @@ def add_defaults_to_fields(
         return df
 
 
-def export_data_locally(table: list[dict], dated: bool = True) -> None:
+def export_data_locally(table: list[dict] | None, dated: bool = True) -> None:
+    if not table:
+        print("Scraper returned no data; skipping parquet write.")
+        return
+
     # Easiest to use Polars to convert a list of dictionaries into a DF/Table
     df = pl.DataFrame(table)
     source = df.select(pl.first("source")).item()

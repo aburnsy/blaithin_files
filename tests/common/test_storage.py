@@ -24,3 +24,17 @@ def test_export_data_locally_undated(tmp_path, monkeypatch):
     export_data_locally(table=table, dated=False)
     expected = tmp_path / "data" / "rhs.parquet"
     assert expected.exists()
+
+
+def test_export_data_locally_none_is_noop(tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    export_data_locally(table=None)
+    assert not (tmp_path / "data").exists()
+    assert "no data" in capsys.readouterr().out
+
+
+def test_export_data_locally_empty_is_noop(tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    export_data_locally(table=[])
+    assert not (tmp_path / "data").exists()
+    assert "no data" in capsys.readouterr().out

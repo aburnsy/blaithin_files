@@ -3,9 +3,16 @@ on:
   schedule:
     - cron: "0 4 * * *"  # 04:00 UTC daily
   workflow_dispatch:
+    inputs:
+      force:
+        description: "Force full re-scrape, ignoring the freshness gate"
+        type: boolean
+        default: false
 jobs:
   scrape:
     runs-on: ubuntu-latest
+    env:
+      FORCE_SCRAPE: ${{ inputs.force }}
     strategy:
       matrix:
         site: [tullys, arboretum, carragh, gardens4you, quickcrop, hedgingie, david_austin]

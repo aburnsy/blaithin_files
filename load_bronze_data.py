@@ -1,11 +1,13 @@
 #! .venv/Scripts/python.exe
 
 import argparse
+import os
 from pathlib import Path
 
 import polars as pl
 import pyarrow.dataset as ds
 
+from src.common.freshness import should_scrape
 from src.common.storage import export_data_locally
 from src.scrapers import (
     arboretum,
@@ -20,6 +22,33 @@ from src.scrapers import (
 )
 
 NURSERIES = ("tullys", "quickcrop", "gardens4you", "carragh", "arboretum")
+SCRAPE_SITES = {
+    "tullys",
+    "quickcrop",
+    "gardens4you",
+    "carragh",
+    "arboretum",
+    "hedgingie",
+    "david_austin",
+}
+
+
+def _force_from_env_or_arg(arg_force: bool) -> bool:
+    if arg_force:
+        return True
+    raw = os.environ.get("FORCE_SCRAPE", "").strip().lower()
+    return raw in ("1", "true", "yes")
+
+
+def _max_age_days_from_env(default: int = 30) -> int:
+    raw = os.environ.get("SCRAPE_MAX_AGE_DAYS")
+    if raw is None:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        print(f"WARN: SCRAPE_MAX_AGE_DAYS={raw!r} is not an int; using {default}")
+        return default
 
 
 def _run_matching(*, llm_enabled: bool) -> None:
@@ -51,6 +80,14 @@ def _run_matching(*, llm_enabled: bool) -> None:
 
 
 def main(params):
+    if params.site in SCRAPE_SITES:
+        force = _force_from_env_or_arg(params.force)
+        max_age = _max_age_days_from_env()
+        run, reason = should_scrape(params.site, max_age_days=max_age, force=force)
+        print(reason)
+        if not run:
+            return
+
     match params.site:
         case "tullys":
             export_data_locally(
@@ -132,6 +169,11 @@ if __name__ == "__main__":
         "--no-llm",
         action="store_true",
         help="When used with --matching, skip the LLM fallback (deterministic only).",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Bypass the freshness gate and re-scrape regardless of recent data.",
     )
     args = parser.parse_args()
 
