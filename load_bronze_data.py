@@ -18,6 +18,7 @@ from src.scrapers import (
     connecting_to_nature,
     david_austin,
     dutchgrown,
+    fluwel,
     gardens4you,
     hedgingie,
     howbert_mays,
@@ -141,6 +142,10 @@ def main(params):
         case "dutchgrown":
             export_data_locally(
                 table=dutchgrown.get_product_data(),
+            )
+        case "fluwel":
+            export_data_locally(
+                table=fluwel.get_product_data(),
             )
         case "rhs_urls":
             export_data_locally(
