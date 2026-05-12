@@ -19,6 +19,7 @@ from src.scrapers import (
     david_austin,
     dutchgrown,
     fluwel,
+    future_forests,
     gardens4you,
     hedgingie,
     howbert_mays,
@@ -151,6 +152,10 @@ def main(params):
         case "plantgift":
             export_data_locally(
                 table=plantgift.get_product_data(),
+            )
+        case "future_forests":
+            export_data_locally(
+                table=future_forests.get_product_data(),
             )
         case "rhs_urls":
             export_data_locally(

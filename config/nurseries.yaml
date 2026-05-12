@@ -213,3 +213,15 @@ plantgift:
   runs_on: github-actions
   ships_live_plants_to_ireland: true
   notes: "Free shipping all orders (claimed); 500+ varieties from EU growers."
+
+future_forests:
+  display_name: "Future Forests"
+  base_url: https://futureforests.ie
+  currency: EUR
+  vat_included: true
+  delivery_type: tiered
+  delivery_fees: []
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: "West Cork trees/hedging/fruit Shopify shop; €15–€75 zoned delivery."
