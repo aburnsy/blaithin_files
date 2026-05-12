@@ -249,7 +249,14 @@ def parse_url(URL: str, category: str, driver: webdriver) -> list[dict]:
 
     while (page := session.get(f"{URL}?page={page_number}")).status_code == 200:
         content = BeautifulSoup(page.content, "html.parser")
-        products = content.find("ul", class_="productGrid").find_all("li")
+        grid = content.find("ul", class_="productGrid")
+        if grid is None:
+            # quickcrop returns 200 with an empty body past the last page,
+            # so we break on missing grid rather than HTTP status.
+            break
+        products = grid.find_all("li")
+        if not products:
+            break
 
         for product in products:
             card_title = product.find(class_="card-title")
