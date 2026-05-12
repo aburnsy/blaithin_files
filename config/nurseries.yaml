@@ -153,3 +153,15 @@ connecting_to_nature:
   runs_on: github-actions
   ships_live_plants_to_ireland: true
   notes: "Waterford native wildflower/bird-food/hedging Shopify store."
+
+howbert_mays:
+  display_name: "Howbert & Mays"
+  base_url: https://howbertandmays.ie
+  currency: EUR
+  vat_included: true
+  delivery_type: tiered
+  delivery_fees: []
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: "Dublin garden/homeware retailer (Monkstown / Clare St / Dundrum)."
