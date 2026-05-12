@@ -177,3 +177,15 @@ newlands:
   runs_on: github-actions
   ships_live_plants_to_ireland: true
   notes: "Dublin full-range garden centre; David Austin reseller; aquatics specialist."
+
+dutchgrown:
+  display_name: "DutchGrown"
+  base_url: https://www.dutchgrown.eu
+  currency: EUR
+  vat_included: true
+  delivery_type: tiered
+  delivery_fees: [{ max_value_eur: 100, fee_eur: 11.99 }, { max_value_eur: null, fee_eur: 0 }]
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: "NL bulb specialist; €11.99 under €100, free over €100."

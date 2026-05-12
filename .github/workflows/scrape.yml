@@ -15,7 +15,7 @@ jobs:
       FORCE_SCRAPE: ${{ inputs.force }}
     strategy:
       matrix:
-        site: [tullys, arboretum, carragh, gardens4you, quickcrop, hedgingie, david_austin, ballyrobert, brown_envelope, connecting_to_nature, howbert_mays, newlands]
+        site: [tullys, arboretum, carragh, gardens4you, quickcrop, hedgingie, david_austin, ballyrobert, brown_envelope, connecting_to_nature, howbert_mays, newlands, dutchgrown]
       fail-fast: false
     steps:
       - uses: actions/checkout@v4

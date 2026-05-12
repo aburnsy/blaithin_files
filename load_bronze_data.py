@@ -17,6 +17,7 @@ from src.scrapers import (
     carragh,
     connecting_to_nature,
     david_austin,
+    dutchgrown,
     gardens4you,
     hedgingie,
     howbert_mays,
@@ -136,6 +137,10 @@ def main(params):
         case "newlands":
             export_data_locally(
                 table=newlands.get_product_data(),
+            )
+        case "dutchgrown":
+            export_data_locally(
+                table=dutchgrown.get_product_data(),
             )
         case "rhs_urls":
             export_data_locally(
