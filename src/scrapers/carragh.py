@@ -40,6 +40,10 @@ _FALLBACK_PRICE_JS = (
     "    return n.innerText.trim();"
     "} return '';"
 )
+_STOCK_JS = (
+    "var p = document.querySelector('p.stock.in-stock'); "
+    "return p ? p.innerText : '';"
+)
 
 
 def extract_price_from_text(price_str):
@@ -140,17 +144,9 @@ def fetch_data_interactive(
                 continue
         price_inc_vat = extract_price_from_text(price)
 
-        try:
-            stock_str = driver.find_element(
-                By.XPATH, '//p[@class="stock in-stock"]'
-            ).get_attribute("innerText")
-            stock_search = re.search(numeric_pattern_compiled, stock_str)
-            if stock_search:
-                stock = stock_search.group(0)
-            else:
-                stock = 0
-        except NoSuchElementException:
-            stock = 0
+        stock_str = driver.execute_script(_STOCK_JS) or ""
+        stock_search = re.search(numeric_pattern_compiled, stock_str)
+        stock = stock_search.group(0) if stock_search else 0
 
         # Leave as raw information - we will process this in silver layer
         size = option_name
