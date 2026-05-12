@@ -261,3 +261,15 @@ plant_store:
   runs_on: github-actions
   ships_live_plants_to_ireland: true
   notes: "Irish indoor-plant Shopify shop; B2B + retail."
+
+hopeless_botanics:
+  display_name: "Hopeless Botanics"
+  base_url: https://hopelessbotanics.ie
+  currency: EUR
+  vat_included: true
+  delivery_type: flat
+  delivery_fees: [{ max_value_eur: null, fee_eur: 8.50 }]
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: "Dublin/Liberties houseplant Shopify; ~€8.50 DPD next-day."

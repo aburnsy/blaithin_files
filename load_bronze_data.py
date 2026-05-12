@@ -23,6 +23,7 @@ from src.scrapers import (
     future_forests,
     gardens4you,
     hedgingie,
+    hopeless_botanics,
     howbert_mays,
     newlands,
     plant_store,
@@ -171,6 +172,10 @@ def main(params):
         case "plant_store":
             export_data_locally(
                 table=plant_store.get_product_data(),
+            )
+        case "hopeless_botanics":
+            export_data_locally(
+                table=hopeless_botanics.get_product_data(),
             )
         case "rhs_urls":
             export_data_locally(
