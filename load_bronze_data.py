@@ -14,6 +14,7 @@ from src.scrapers import (
     arboretum,
     ballyrobert,
     beattys,
+    bloombox,
     brown_envelope,
     carragh,
     connecting_to_nature,
@@ -176,6 +177,10 @@ def main(params):
         case "hopeless_botanics":
             export_data_locally(
                 table=hopeless_botanics.get_product_data(),
+            )
+        case "bloombox":
+            export_data_locally(
+                table=bloombox.get_product_data(),
             )
         case "rhs_urls":
             export_data_locally(

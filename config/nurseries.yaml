@@ -273,3 +273,15 @@ hopeless_botanics:
   runs_on: github-actions
   ships_live_plants_to_ireland: true
   notes: "Dublin/Liberties houseplant Shopify; ~€8.50 DPD next-day."
+
+bloombox:
+  display_name: "Bloombox Club Ireland"
+  base_url: https://bloomboxclub.ie
+  currency: EUR
+  vat_included: true
+  delivery_type: tiered
+  delivery_fees: []
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: "Houseplant + subscription Shopify shop; .ie storefront priced in EUR."
