@@ -129,3 +129,15 @@ ballyrobert:
   runs_on: github-actions
   ships_live_plants_to_ireland: true
   notes: "Northern Ireland Shopify store; £5.99 flat, free over £200; RHS Partner Garden."
+
+brown_envelope:
+  display_name: "Brown Envelope Seeds"
+  base_url: https://brownenvelopeseeds.ie
+  currency: EUR
+  vat_included: true
+  delivery_type: tiered
+  delivery_fees: []
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: "Organic open-pollinated seed (West Cork); free shipping over €50."

@@ -13,6 +13,7 @@ from src.common.storage import export_data_locally
 from src.scrapers import (
     arboretum,
     ballyrobert,
+    brown_envelope,
     carragh,
     david_austin,
     gardens4you,
@@ -116,6 +117,10 @@ def main(params):
         case "ballyrobert":
             export_data_locally(
                 table=ballyrobert.get_product_data(),
+            )
+        case "brown_envelope":
+            export_data_locally(
+                table=brown_envelope.get_product_data(),
             )
         case "rhs_urls":
             export_data_locally(
