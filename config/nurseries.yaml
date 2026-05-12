@@ -321,3 +321,15 @@ cullen:
   runs_on: github-actions
   ships_live_plants_to_ireland: true
   notes: "Carlow native-tree/hedging WooCommerce; DAFM-approved."
+
+hedges_direct:
+  display_name: "Hedges & Trees Direct"
+  base_url: https://hedgesandtreesdirect.ie
+  currency: EUR
+  vat_included: true
+  delivery_type: tiered
+  delivery_fees: []
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: "Irish hedging WooCommerce; whitethorn from €0.80; nationwide delivery."

@@ -25,6 +25,7 @@ from src.scrapers import (
     fluwel,
     future_forests,
     gardens4you,
+    hedges_direct,
     hedgingie,
     hopeless_botanics,
     howbert_mays,
@@ -201,6 +202,10 @@ def main(params):
         case "cullen":
             export_data_locally(
                 table=cullen.get_product_data(),
+            )
+        case "hedges_direct":
+            export_data_locally(
+                table=hedges_direct.get_product_data(),
             )
         case "rhs_urls":
             export_data_locally(
