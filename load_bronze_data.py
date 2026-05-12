@@ -13,6 +13,7 @@ from src.common.storage import export_data_locally
 from src.scrapers import (
     arboretum,
     ballyrobert,
+    beattys,
     brown_envelope,
     carragh,
     connecting_to_nature,
@@ -161,6 +162,10 @@ def main(params):
         case "windyridge":
             export_data_locally(
                 table=windyridge.get_product_data(),
+            )
+        case "beattys":
+            export_data_locally(
+                table=beattys.get_product_data(),
             )
         case "rhs_urls":
             export_data_locally(

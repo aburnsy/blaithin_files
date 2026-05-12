@@ -237,3 +237,15 @@ windyridge:
   runs_on: github-actions
   ships_live_plants_to_ireland: true
   notes: "Dún Laoghaire family-run Shopify shop."
+
+beattys:
+  display_name: "Beattys of Loughrea"
+  base_url: https://www.beattys.ie
+  currency: EUR
+  vat_included: true
+  delivery_type: tiered
+  delivery_fees: []
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: "Galway hardware+garden Shopify shop; resells Suttons & T&M seeds."
