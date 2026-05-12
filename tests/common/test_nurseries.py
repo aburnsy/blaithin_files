@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from src.common.nurseries import NurseryConfig, load_nurseries
+from src.common.nurseries import NurseryConfig, load_nurseries, scraped_nursery_slugs
 
 
 def test_load_nurseries_returns_dict_keyed_by_source():
@@ -30,6 +30,15 @@ def test_nl_nurseries_flag_vat_status():
     nurseries = load_nurseries()
     bulbi = nurseries["bulbi"]
     assert bulbi.vat_included is False  # IE buyers may face customs VAT
+
+
+def test_scraped_nursery_slugs_includes_github_actions_only():
+    slugs = scraped_nursery_slugs()
+    assert "tullys" in slugs  # runs_on: github-actions
+    assert "hedgingie" in slugs  # runs_on: github-actions
+    assert "david_austin" in slugs  # runs_on: github-actions
+    assert "farmer_gracy" not in slugs  # runs_on: self-hosted
+    assert "bulbi" not in slugs  # runs_on: self-hosted
 
 
 def test_invalid_currency_rejected():

@@ -49,3 +49,14 @@ def load_nurseries(path: Path | None = None) -> dict[str, NurseryConfig]:
         raw = yaml.safe_load(f)
 
     return {slug: NurseryConfig.model_validate(cfg) for slug, cfg in raw.items()}
+
+
+def scraped_nursery_slugs(path: Path | None = None) -> tuple[str, ...]:
+    """Slugs of nurseries with a scraper today (``runs_on='github-actions'``).
+
+    Self-hosted entries (farmer_gracy, bulbi, …) live in the yaml as planning
+    placeholders without scrapers and are excluded from this list. This is the
+    single source of truth for the freshness gate and the matching input loop.
+    """
+    cfgs = load_nurseries(path)
+    return tuple(slug for slug, cfg in cfgs.items() if cfg.runs_on == "github-actions")

@@ -8,6 +8,7 @@ import polars as pl
 import pyarrow.dataset as ds
 
 from src.common.freshness import should_scrape
+from src.common.nurseries import scraped_nursery_slugs
 from src.common.storage import export_data_locally
 from src.scrapers import (
     arboretum,
@@ -21,16 +22,10 @@ from src.scrapers import (
     tullys,
 )
 
-NURSERIES = ("tullys", "quickcrop", "gardens4you", "carragh", "arboretum")
-SCRAPE_SITES = {
-    "tullys",
-    "quickcrop",
-    "gardens4you",
-    "carragh",
-    "arboretum",
-    "hedgingie",
-    "david_austin",
-}
+# Single source of truth for "nurseries we currently scrape". Pulled from
+# config/nurseries.yaml — any entry with `runs_on: github-actions`. Used for
+# both the freshness gate and the matching input loop.
+SCRAPED_NURSERIES: tuple[str, ...] = scraped_nursery_slugs()
 
 
 def _force_from_env_or_arg(arg_force: bool) -> bool:
@@ -57,7 +52,7 @@ def _run_matching(*, llm_enabled: bool) -> None:
     from src.matching.run import run_with_llm_fallback
 
     frames = []
-    for nursery in NURSERIES:
+    for nursery in SCRAPED_NURSERIES:
         nursery_dir = Path(f"data/{nursery}")
         parquets = sorted(nursery_dir.glob("*.parquet"))
         if not parquets:
@@ -80,7 +75,7 @@ def _run_matching(*, llm_enabled: bool) -> None:
 
 
 def main(params):
-    if params.site in SCRAPE_SITES:
+    if params.site in SCRAPED_NURSERIES:
         force = _force_from_env_or_arg(params.force)
         max_age = _max_age_days_from_env()
         run, reason = should_scrape(params.site, max_age_days=max_age, force=force)
@@ -129,15 +124,7 @@ def main(params):
             )
 
         case _:
-            export_data_locally(
-                table=carragh.get_product_data(),
-            )
-            export_data_locally(table=tullys.get_product_data())
-            export_data_locally(table=quickcrop.get_product_data())
-            export_data_locally(table=gardens4you.get_product_data())
-            export_data_locally(
-                table=arboretum.get_product_data(),
-            )
+            raise ValueError(f"Unhandled site: {params.site!r}")
 
 
 if __name__ == "__main__":
@@ -148,17 +135,7 @@ if __name__ == "__main__":
     mode.add_argument(
         "--site",
         help="Name of the site you would like to fetch data for.",
-        choices=[
-            "tullys",
-            "quickcrop",
-            "gardens4you",
-            "carragh",
-            "arboretum",
-            "hedgingie",
-            "david_austin",
-            "rhs",
-            "rhs_urls",
-        ],
+        choices=[*SCRAPED_NURSERIES, "rhs", "rhs_urls"],
     )
     mode.add_argument(
         "--matching",

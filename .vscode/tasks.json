@@ -1,0 +1,149 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Scrape: all nurseries",
+      "detail": "Run scripts/scrape_all.py with a chosen concurrency. Honours the 30-day freshness gate.",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": [
+        "scripts/scrape_all.py",
+        "-j",
+        "${input:concurrency}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true,
+        "echo": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Scrape: all nurseries (force refresh)",
+      "detail": "Same as above but bypasses the freshness gate via FORCE_SCRAPE=1.",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": [
+        "scripts/scrape_all.py",
+        "-j",
+        "${input:concurrency}",
+        "--force"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true,
+        "echo": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Scrape: pick sites",
+      "detail": "Run a subset of sites (force enabled, since you usually pick a site to retry it).",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": [
+        "scripts/scrape_all.py",
+        "-j",
+        "${input:concurrency}",
+        "--sites",
+        "${input:sites}",
+        "--force"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true,
+        "echo": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Match: run pipeline",
+      "detail": "Run the gnparser+rapidfuzz+LLM matching pipeline against the latest per-site parquets.",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": [
+        "load_bronze_data.py",
+        "--matching"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true,
+        "echo": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "RHS: refresh dictionary",
+      "detail": "Scrape rhs_urls then rhs detail pages into data/rhs.parquet. Skips step 2 if step 1 fails.",
+      "type": "shell",
+      "command": "& '${workspaceFolder}/.venv/Scripts/python.exe' load_bronze_data.py --site rhs_urls; if ($?) { & '${workspaceFolder}/.venv/Scripts/python.exe' load_bronze_data.py --site rhs }",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "shell": {
+          "executable": "powershell.exe",
+          "args": ["-NoProfile", "-Command"]
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true,
+        "echo": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Scrape + Match: all nurseries",
+      "detail": "Scrape every nursery (honouring freshness gate) then run the matching pipeline. Mirrors CI's nightly scrape -> match-and-commit flow.",
+      "dependsOn": [
+        "Scrape: all nurseries",
+        "Match: run pipeline"
+      ],
+      "dependsOrder": "sequence",
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "concurrency",
+      "type": "pickString",
+      "description": "How many sites to scrape in parallel",
+      "options": ["1", "2", "3", "4", "5", "6", "7"],
+      "default": "3"
+    },
+    {
+      "id": "sites",
+      "type": "pickString",
+      "description": "Site(s) to scrape (comma-separated for multiple)",
+      "options": [
+        "tullys",
+        "arboretum",
+        "carragh",
+        "gardens4you",
+        "quickcrop",
+        "hedgingie",
+        "david_austin",
+        "carragh,quickcrop",
+        "tullys,arboretum",
+        "tullys,arboretum,carragh,gardens4you,quickcrop,hedgingie,david_austin"
+      ],
+      "default": "tullys"
+    }
+  ]
+}
