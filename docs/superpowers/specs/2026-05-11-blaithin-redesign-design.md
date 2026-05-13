@@ -1,5 +1,7 @@
 # Blaithin Redesign — Design Spec
 
+> **2026-05-13 addendum:** Sub-project 3 (Dashboard — Observable Framework) is superseded by the wishlist optimiser spec at `docs/superpowers/specs/2026-05-13-wishlist-optimiser-design.md`. The Observable site is being deleted; comparison work happens in a local Streamlit app instead. Sub-projects 0, R, 2, 1, 4 remain in effect.
+
 **Status:** Draft for user review
 **Date:** 2026-05-11
 **Owner:** Andrew Burns

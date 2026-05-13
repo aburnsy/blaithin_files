@@ -5,10 +5,10 @@ Plant price comparison across Irish, UK, and EU online nurseries.
 ## What this is
 
 Daily scrapes of nursery websites → matched to RHS plant database →
-served as a static dashboard. All free, all open.
+fed into a local Streamlit wishlist optimiser that finds the cheapest
+nursery-subset plan to door for a list of desired plants.
 
-- **Dashboard:** https://aburnsy.github.io/blaithin_files/ (GitHub Pages)
-- **Spec:** `docs/superpowers/specs/2026-05-11-blaithin-redesign-design.md`
+- **Spec:** `docs/superpowers/specs/2026-05-13-wishlist-optimiser-design.md`
 - **Plans:** `docs/superpowers/plans/`
 - **Nursery research:** `docs/research/nurseries-ireland-shipping.md`
 
@@ -17,9 +17,9 @@ served as a static dashboard. All free, all open.
 ```
 python -m venv .venv && .venv/Scripts/activate  # or source .venv/bin/activate
 pip install -r requirements.txt
-python load_bronze_data.py --site tullys     # scrape one site
-python load_bronze_data.py --matching        # run matching pipeline
-cd site && npm install && npm run dev        # run dashboard locally
+python load_bronze_data.py --site tullys         # scrape one site
+python load_bronze_data.py --matching            # run matching + size normalisation
+streamlit run scripts/wishlist.py                # launch the optimiser
 ```
 
 ## Scrape cadence
@@ -48,8 +48,10 @@ See: `docs/superpowers/specs/2026-05-12-scrape-freshness-gate-design.md`
 
 - `src/scrapers/` — site-specific scrapers, all on `BaseScraper`
 - `src/matching/` — gnparser+rapidfuzz+LLM-fallback pipeline
+- `src/transforms/` — post-matching transforms (e.g., size normalisation)
+- `src/wishlist/` — wishlist optimiser core (pure Python)
 - `src/common/` — storage, logging, FX, nursery config loader
-- `site/` — Observable Framework dashboard
-- `data/` — parquet snapshots (committed; refreshed by nightly cron)
+- `scripts/wishlist.py` — Streamlit app entry point
+- `data/` — parquet snapshots (committed; refreshed by monthly cron)
 - `config/` — per-nursery URL lists + `nurseries.yaml` metadata
 - `tests/` — pytest suite + VCR fixtures

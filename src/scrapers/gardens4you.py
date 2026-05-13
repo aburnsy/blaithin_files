@@ -17,9 +17,12 @@ from src.scrapers.concurrent import fetch_all_concurrent
 
 _BASE = "https://www.gardens4you.ie"
 _SITEMAP = f"{_BASE}/sitemaps/ie/sitemap.xml"
-# G4Y returned mass 403s at concurrency=10. The serial bot-UA path worked,
-# so we keep that UA (default in concurrent.py) and dial concurrency right
-# down — still ~3× faster than serial and well within the site's tolerance.
+# G4Y is Cloudflare-fronted and now 403s the default bot UA on product pages
+# (sitemap still served). Use a Chrome UA — same convention as ardcarne.
+_CHROME_UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+)
 _MAX_CONCURRENT = 3
 
 _size_pattern_cm = re.compile(r"\d+\s*cm", re.IGNORECASE)
@@ -69,7 +72,10 @@ class Gardens4YouScraper(BaseScraper):
         self.log.info("sitemap_loaded", products=len(product_urls))
 
         pages = fetch_all_concurrent(
-            product_urls, max_concurrent=_MAX_CONCURRENT, log=self.log
+            product_urls,
+            max_concurrent=_MAX_CONCURRENT,
+            user_agent=_CHROME_UA,
+            log=self.log,
         )
 
         results: list[dict] = []
