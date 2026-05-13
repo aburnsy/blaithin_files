@@ -1,5 +1,7 @@
 requests-html
 selenium
+undetected-chromedriver
+setuptools  # provides distutils shim for undetected-chromedriver on Python 3.12+
 bs4
 polars==0.20.16
 pyarrow

@@ -38,6 +38,7 @@ from src.scrapers import (
     mount_venus,
     mr_middleton,
     newlands,
+    peter_nyssen,
     promesse,
     plant_store,
     plantgift,
@@ -248,6 +249,10 @@ def main(params):
         case "promesse":
             export_data_locally(
                 table=promesse.get_product_data(),
+            )
+        case "peter_nyssen":
+            export_data_locally(
+                table=peter_nyssen.get_product_data(),
             )
         case "rhs_urls":
             export_data_locally(

@@ -424,6 +424,6 @@ peter_nyssen:
   delivery_type: flat
   delivery_fees: [{ max_value_eur: null, fee_eur: 17 }]
   min_order_eur: 0
-  runs_on: self-hosted
+  runs_on: github-actions
   ships_live_plants_to_ireland: true
-  notes: "Manchester-based bulb specialist shipping from NL warehouse since Brexit (EU & NI delivery normal); ~£17/€17 to IE. Cloudflare-fronted — needs a browser-driven scraper. DEFERRED: confirm with user before investing in a Playwright/Selenium build."
+  notes: "Manchester-based bulb specialist shipping from NL warehouse since Brexit (EU & NI delivery normal); ~£17/€17 to IE. Cloudflare Managed Challenge — driven by undetected_chromedriver (non-headless required). Parses Magento listing cards directly; no per-product fetch."
