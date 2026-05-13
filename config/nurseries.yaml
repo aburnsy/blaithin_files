@@ -365,6 +365,90 @@ famous_roses:
   ships_live_plants_to_ireland: true
   notes: "RO/EU rose specialist Shopify shop; bare-root + potted; courier rates."
 
+ireland_trees:
+  display_name: "Kearney's Nursery (Ireland Trees)"
+  base_url: https://www.irelandtrees.com
+  currency: EUR
+  vat_included: true
+  delivery_type: tiered
+  delivery_fees: []
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: "Limerick/Tipperary native trees + bare-root hedging Shopify store."
+
+doonwood:
+  display_name: "Doonwood Nurseries"
+  base_url: https://doonwood.com
+  currency: EUR
+  vat_included: true
+  delivery_type: tiered
+  delivery_fees: []
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: "Galway native/fruit/ornamental trees + hedging WooCommerce shop."
+
+fruit_hill_farm:
+  display_name: "Fruit Hill Farm"
+  base_url: https://www.fruithillfarm.com
+  currency: EUR
+  vat_included: true
+  delivery_type: tiered
+  delivery_fees: []
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: "Bantry organic specialist — largest IE seed-potato range plus garlic/onion sets/bulbs/propagation. Magento 2 GraphQL."
+
+dutch_bulbs:
+  display_name: "Dutch-Bulbs.com"
+  base_url: https://dutch-bulbs.com
+  currency: EUR
+  vat_included: true
+  delivery_type: tiered
+  delivery_fees: [{ max_value_eur: 50, fee_eur: 8.95 }, { max_value_eur: 100, fee_eur: 5.95 }, { max_value_eur: null, fee_eur: 0 }]
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: "NL bulb/perennial specialist on Magento 2. €8.95 under €50, €5.95 €50-99, free over €100. Canonical host is dutch-bulbs.com (no www)."
+
+organic_centre:
+  display_name: "The Organic Centre"
+  base_url: https://shop.theorganiccentre.ie
+  currency: EUR
+  vat_included: false
+  delivery_type: tiered
+  delivery_fees: []
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: "Leitrim charity / social enterprise — organic seeds, seed potatoes, transplants, garden supplies. BigCommerce Stencil; sitemap-driven; JSON-LD parsed."
+
+seed_savers:
+  display_name: "Irish Seed Savers Association"
+  base_url: https://irishseedsavers.ie
+  currency: EUR
+  vat_included: true
+  delivery_type: tiered
+  delivery_fees: []
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: "Clare charity — heritage Irish apple trees (bare-root + potted), heirloom seeds, gift shop. WooCommerce under /shop/; no REST API or product sitemap, so walks /shop/product-category/* with /page/N/ pagination and parses JSON-LD on each PDP."
+
+esker_daffodils:
+  display_name: "Esker Farm Daffodils"
+  base_url: https://www.eskerfarmdaffodils.com
+  currency: GBP
+  vat_included: true
+  delivery_type: tiered
+  delivery_fees: [{ max_value_eur: 2, fee_eur: 8 }, { max_value_eur: 5, fee_eur: 15 }, { max_value_eur: null, fee_eur: 25 }]
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: "Tyrone daffodil specialist (standard / intermediate / miniature) + other bulbs. Custom platform; sitemap-driven; schema.org microdata parsed. NI/IE shipping by weight: £8 ≤2kg, £15 ≤5kg, £25 for 100+ bulbs (delivery_fees encode kg as max_value_eur)."
+
 # Below: documented but not yet scraped — scraper module not built.
 # Switch runs_on to github-actions when src/scrapers/<slug>.py lands.
 

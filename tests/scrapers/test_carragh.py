@@ -1,38 +1,38 @@
-"""Regression tests for Hedging.ie scraper (WooCommerce Store API)."""
+"""Regression tests for the Caragh Nurseries scraper (WooCommerce Store API)."""
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
 
-from src.scrapers.hedgingie import HedgingIeScraper
+from src.scrapers.carragh import CaraghScraper
 
 CASSETTES = Path(__file__).resolve().parents[1] / "fixtures" / "cassettes"
 
 
 def _products() -> list[dict]:
     return json.loads(
-        (CASSETTES / "hedgingie_products.json").read_text(encoding="utf-8")
+        (CASSETTES / "carragh_products.json").read_text(encoding="utf-8")
     )
 
 
 def test_parse_record_returns_dict():
-    scraper = HedgingIeScraper()
+    scraper = CaraghScraper()
     rec = scraper.parse_record(
-        _products()[0], "https://hedging.ie/wp-json/wc/store/v1/products"
+        _products()[0], "https://caraghnurseries.ie/wp-json/wc/store/v1/products"
     )
     assert rec is not None
-    assert rec["source"] == "hedgingie"
+    assert rec["source"] == "carragh"
     assert rec["currency"] == "EUR"
-    assert rec["product_url"].startswith("https://hedging.ie")
+    assert rec["product_url"].startswith("https://caraghnurseries.ie")
 
 
 def test_all_records_have_required_fields():
-    scraper = HedgingIeScraper()
+    scraper = CaraghScraper()
     n = 0
     for p in _products():
         rec = scraper.parse_record(
-            p, "https://hedging.ie/wp-json/wc/store/v1/products"
+            p, "https://caraghnurseries.ie/wp-json/wc/store/v1/products"
         )
         if rec is None:
             continue

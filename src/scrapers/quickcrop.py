@@ -10,11 +10,14 @@ public storefront endpoint::
 We call that endpoint directly with httpx — one short request per option —
 instead of driving Selenium through the dropdown. Single-price products
 parse straight from the product page HTML.
+
+Category discovery is sitemap-driven (``/xmlsitemap.php?type=categories``)
+for full catalog coverage. The legacy ``config/quickcrop.py`` hand-picked
+seed list missed most of the catalog.
 """
 
 from __future__ import annotations
 
-import importlib
 import json
 import re
 from urllib.parse import urlparse
@@ -22,6 +25,7 @@ from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 
 from src.scrapers.base import BaseScraper
+from src.scrapers.bigcommerce_sitemap import bc_category_urls
 from src.scrapers.http import RetryExhausted
 
 _BASE = "https://www.quickcrop.ie"
@@ -37,15 +41,16 @@ _MULTIBUY_PATTERNS = (
 class QuickcropScraper(BaseScraper):
     source = "quickcrop"
     rate_limit_seconds = 0.5
-
-    def __init__(self, config_module: str = "config.quickcrop"):
-        super().__init__()
-        self._config = importlib.import_module(config_module)
+    # Subclasses (mr_middleton) override _site_base; default is quickcrop.ie.
+    _site_base: str = _BASE
 
     def discover_categories(self) -> list[tuple[str, str]]:
-        """Paginate ``?page=N`` for each configured category until the grid is empty."""
+        """Walk every category in the BigCommerce sitemap, paginating each
+        with ``?page=N`` until the grid is empty.
+        """
         leaves: list[tuple[str, str]] = []
-        for base_url, category_name in self._config.data_sources:
+        for base_url in bc_category_urls(self._site_base, log=self.log):
+            category_name = _slug_to_label(base_url)
             page = 1
             while True:
                 url = base_url if page == 1 else f"{base_url}?page={page}"
@@ -65,11 +70,15 @@ class QuickcropScraper(BaseScraper):
 
     @staticmethod
     def _listing_has_grid(html: str) -> bool:
+        # Look for actual product cards (`.card-title` anchors). The grid
+        # itself often renders subcategory tiles on parent-category pages
+        # and on out-of-range ``?page=N`` URLs that wrap back to the
+        # landing tile view, so checking for ``li`` alone false-positives.
         soup = BeautifulSoup(html, "html.parser")
         grid = soup.find("ul", class_="productGrid")
         if grid is None:
             return False
-        return bool(grid.find("li"))
+        return bool(grid.select_one("li .card-title a"))
 
     def parse_listing(self, html: str) -> list[str]:
         soup = BeautifulSoup(html, "html.parser")
@@ -170,10 +179,15 @@ class QuickcropScraper(BaseScraper):
 
     @staticmethod
     def _extract_page_price(soup: BeautifulSoup) -> float | None:
+        # Some products display "€12.95 - €49.50" price ranges on the PDP.
+        # ``_price_from_text`` strips separators and would parse that as
+        # 129549.50 — take the first price token instead.
         span = soup.find("span", class_="price price--withTax")
         if not span:
             return None
-        return _price_from_text(span.get_text(strip=True))
+        raw = span.get_text(strip=True)
+        m = re.search(r"(\d+(?:[.,]\d+)?)", raw)
+        return _price_from_text(m.group(1)) if m else None
 
     @staticmethod
     def _extract_page_stock(soup: BeautifulSoup) -> int | None:
@@ -399,7 +413,11 @@ def _extract_quantity(text: str) -> int:
 # ---------------------------------------------------------------------------
 
 
-def get_product_data(config_file_name: str = "quickcrop") -> list[dict]:
-    """Backward-compat shim — runs the new scraper and returns the legacy list."""
-    with QuickcropScraper(config_module=f"config.{config_file_name}") as scraper:
+def _slug_to_label(url: str) -> str:
+    slug = url.rstrip("/").rsplit("/", 1)[-1]
+    return slug.replace("-", " ").title() if slug else ""
+
+
+def get_product_data() -> list[dict]:
+    with QuickcropScraper() as scraper:
         return scraper.run()

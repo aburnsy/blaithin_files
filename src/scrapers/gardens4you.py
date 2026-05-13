@@ -1,13 +1,21 @@
-"""Gardens4You scraper — Magento-style site, no JS rendering needed."""
+"""Gardens4You scraper — Magento-style site, no JS rendering needed.
+
+Coverage strategy: walk every product URL listed in the public sitemap
+at ``/sitemaps/ie/sitemap.xml`` (6800+ products in one file). Previously
+the scraper used a hand-picked 9-category seed list and missed most of
+the catalog — see [[full-coverage]] memory.
+"""
 
 from __future__ import annotations
 
-import importlib
 import re
 
 from bs4 import BeautifulSoup
 
 from src.scrapers.base import BaseScraper
+
+_BASE = "https://www.gardens4you.ie"
+_SITEMAP = f"{_BASE}/sitemaps/ie/sitemap.xml"
 
 _size_pattern_cm = re.compile(r"\d+\s*cm", re.IGNORECASE)
 _size_pattern_litre = re.compile(r"\d+\s*ltr", re.IGNORECASE)
@@ -17,39 +25,26 @@ _stock_pattern = re.compile(r"\d+")
 
 class Gardens4YouScraper(BaseScraper):
     source = "gardens4you"
-    rate_limit_seconds = 1.0
-
-    def __init__(self, config_module: str = "config.gardens4you"):
-        super().__init__()
-        self._config = importlib.import_module(config_module)
+    rate_limit_seconds = 0.5
 
     def discover_categories(self) -> list[tuple[str, str]]:
-        return list(self._config.data_sources)
+        """Single seed: the sitemap. ``parse_listing`` then pulls every
+        product URL from the returned XML."""
+        return [(_SITEMAP, "")]
 
     def parse_listing(self, html: str) -> list[str]:
-        """Return deduplicated list of product page URLs from a category listing."""
-        soup = BeautifulSoup(html, "html.parser")
+        """Extract every product URL from the sitemap XML."""
+        urls = re.findall(r"<loc>([^<]+)</loc>", html)
+        out: list[str] = []
         seen: set[str] = set()
-        unique: list[str] = []
-        for a in soup.find_all("a", class_="product-item-link", href=True):
-            href: str = a["href"]
-            if href.startswith("http"):
-                url = href
-            elif href.startswith("/"):
-                url = f"https://www.gardens4you.ie{href}"
-            else:
+        for u in urls:
+            if not u.endswith(".html"):
                 continue
+            url = u.split("?", 1)[0]
             if url not in seen:
                 seen.add(url)
-                unique.append(url)
-        # Fallback: regex match on aNNNN.html pattern (catches sites with slight class variation)
-        if not unique:
-            for href in re.findall(r'href="([^"]+a\d+\.html)"', html):
-                url = href if href.startswith("http") else f"https://www.gardens4you.ie{href}"
-                if url not in seen:
-                    seen.add(url)
-                    unique.append(url)
-        return unique
+                out.append(url)
+        return out
 
     def parse_product(
         self, html: str, product_url: str, source_url: str, category: str
@@ -177,7 +172,6 @@ class Gardens4YouScraper(BaseScraper):
 # Backward-compat shim — load_bronze_data.py calls get_product_data()
 # ---------------------------------------------------------------------------
 
-def get_product_data(config_file_name: str = "gardens4you") -> list[dict]:
-    """Backward-compat shim — runs the new scraper and returns the legacy list."""
-    with Gardens4YouScraper(config_module=f"config.{config_file_name}") as scraper:
+def get_product_data() -> list[dict]:
+    with Gardens4YouScraper() as scraper:
         return scraper.run()

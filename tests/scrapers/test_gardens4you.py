@@ -9,20 +9,20 @@ from src.scrapers.gardens4you import Gardens4YouScraper
 CASSETTES = Path(__file__).resolve().parents[1] / "fixtures" / "cassettes"
 
 
-def test_parse_listing_returns_urls():
+def test_parse_listing_extracts_urls_from_sitemap():
     scraper = Gardens4YouScraper()
-    html = (CASSETTES / "gardens4you_listing.html").read_text(encoding="utf-8")
-    urls = scraper.parse_listing(html)
+    xml = (CASSETTES / "gardens4you_sitemap.xml").read_text(encoding="utf-8")
+    urls = scraper.parse_listing(xml)
     assert len(urls) > 0
     assert all(u.startswith("https://www.gardens4you.ie") for u in urls)
+    assert len(urls) == len(set(urls))
+    assert all("?" not in u for u in urls)
 
 
-def test_parse_listing_deduplicates():
-    """Each product URL should appear only once even if the page links it twice."""
+def test_discover_categories_returns_sitemap_seed():
     scraper = Gardens4YouScraper()
-    html = (CASSETTES / "gardens4you_listing.html").read_text(encoding="utf-8")
-    urls = scraper.parse_listing(html)
-    assert len(urls) == len(set(urls)), "Duplicate URLs found in listing output"
+    seeds = scraper.discover_categories()
+    assert seeds == [("https://www.gardens4you.ie/sitemaps/ie/sitemap.xml", "")]
 
 
 def test_parse_product_returns_record():

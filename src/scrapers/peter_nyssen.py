@@ -5,18 +5,18 @@ Cloudflare's Managed Challenge fires on every plain GET, so we drive
 JS+webdriver fingerprinting). Non-headless mode is required — headless
 still gets challenged. The CF interstitial typically clears in ~5-10s.
 
-Once past CF, the storefront is standard Magento: each listing page has
-``article.product-item`` cards carrying name/price/url/image, and
-``?p=N`` paginates. Per-product fetches aren't needed for the matching
-pipeline, so we parse cards directly.
+Coverage strategy: full catalog. After CF passes we pull the sitemap
+in-browser, filter to every category page under ``/spring-planting/``
+and ``/autumn-planting/`` (plus a handful of root-level category
+endpoints), and walk each with ``?p=N`` pagination. Cross-category
+duplicates are deduped by ``product_url``.
 
-UK/NL bulb specialist — prices in GBP. Ships from NL to IE since Brexit
-so ROI delivery is normal (~£17/€17 flat).
+UK/NL bulb specialist — prices in GBP. Ships from NL to IE since
+Brexit so ROI delivery is normal (~£17/€17 flat).
 """
 
 from __future__ import annotations
 
-import importlib
 import re
 import time
 from datetime import date
@@ -27,8 +27,21 @@ from src.common.logging import get_logger
 from src.common.report import ScrapeReport
 
 _BASE = "https://www.peternyssen.com"
+_SITEMAP = f"{_BASE}/sitemap.xml"
 _CF_PASS_TIMEOUT = 30  # seconds to wait for Cloudflare challenge to clear
-_PAGE_LOAD_WAIT = 2.0   # seconds after navigation before parsing
+_PAGE_LOAD_WAIT = 1.5   # seconds after navigation before parsing
+
+# The two product trees in the sitemap. Both top-level pages
+# (/spring-planting.html, /autumn-planting.html) showed 0 products in
+# probing, so we walk only the categories nested below them.
+_PRODUCT_TREES = ("spring-planting", "autumn-planting")
+
+# Root-level category pages (single segment .html) that carry products
+# but live outside the seasonal trees.
+_ROOT_CATEGORIES: tuple[tuple[str, str], ...] = (
+    ("/accessories.html", "Accessories"),
+    ("/gifts.html", "Gifts"),
+)
 
 
 class PeterNyssenScraper:
@@ -38,10 +51,9 @@ class PeterNyssenScraper:
 
     source = "peter_nyssen"
 
-    def __init__(self, config_module: str = "config.peter_nyssen") -> None:
+    def __init__(self) -> None:
         self.log = get_logger(f"scraper.{self.source}")
         self.report = ScrapeReport(source=self.source, run_date=date.today())
-        self._config = importlib.import_module(config_module)
         self._driver = None
 
     def __enter__(self):
@@ -57,7 +69,7 @@ class PeterNyssenScraper:
         self._pass_cf()
         return self
 
-    def __exit__(self, *args):
+    def __exit__(self, *_args):
         if self._driver is not None:
             try:
                 self._driver.quit()
@@ -79,14 +91,62 @@ class PeterNyssenScraper:
             "site likely tightened its rules; bypass library may need an update."
         )
 
+    def _fetch_sitemap(self) -> str:
+        """Pull sitemap.xml via in-browser fetch (uses passed CF cookies)."""
+        if self._driver is None:
+            raise RuntimeError("Driver not initialised")
+        return self._driver.execute_async_script(
+            "const cb = arguments[arguments.length - 1];"
+            f"fetch('{_SITEMAP}').then(r => r.text()).then(t => cb(t))"
+            ".catch(e => cb('ERR: ' + e));"
+        )
+
+    def _category_seeds(self) -> list[tuple[str, str]]:
+        """Every category-page URL we should walk, with a category label.
+
+        Source: the sitemap. We include every .html URL nested under
+        ``/spring-planting/`` or ``/autumn-planting/`` (any depth — leaf
+        categories included, the deepest sub-categories add no extra
+        products but cost nothing thanks to the URL-level dedupe).
+        Single-segment root URLs are excluded — they're either landing
+        pages with no products or product-detail pages.
+        """
+        sitemap = self._fetch_sitemap()
+        urls = re.findall(r"<loc>([^<]+)</loc>", sitemap)
+        seeds: list[tuple[str, str]] = []
+        seen: set[str] = set()
+
+        for url in urls:
+            path = url.replace(_BASE, "", 1)
+            if not path.endswith(".html"):
+                continue
+            segs = path.lstrip("/").rsplit(".", 1)[0].split("/")
+            # Restrict to nested URLs under the two seasonal trees.
+            if len(segs) < 2 or segs[0] not in _PRODUCT_TREES:
+                continue
+            category = _category_label(segs)
+            if url not in seen:
+                seen.add(url)
+                seeds.append((url, category))
+
+        for path, category in _ROOT_CATEGORIES:
+            url = _BASE + path
+            if url not in seen:
+                seen.add(url)
+                seeds.append((url, category))
+
+        self.log.info("category_seeds", count=len(seeds))
+        return seeds
+
     def run(self) -> list[dict]:
         if self._driver is None:
             raise RuntimeError("Scraper used outside of `with` block")
 
         results: list[dict] = []
-        seen_urls: set[str] = set()
+        seen_product_urls: set[str] = set()
 
-        for base_url, category in self._config.data_sources:
+        seeds = self._category_seeds()
+        for base_url, category in seeds:
             page = 1
             while True:
                 url = base_url if page == 1 else f"{base_url}?p={page}"
@@ -99,32 +159,40 @@ class PeterNyssenScraper:
 
                 time.sleep(_PAGE_LOAD_WAIT)
                 html = self._driver.page_source
+                title = (self._driver.title or "").strip()
+
+                # Skip 404 pages.
+                if "Page Not Found" in title:
+                    break
 
                 cards = _extract_cards(html)
                 if not cards:
+                    # Parent landing pages with no products — skip silently.
                     break
 
                 added_any = False
                 for card in cards:
                     self.report.products_in += 1
-                    record = self._record_from_card(card, source_url=url, category=category)
+                    record = self._record_from_card(
+                        card, source_url=url, category=category
+                    )
                     if record is None:
                         self.report.dropped["parse_returned_none"] = (
                             self.report.dropped.get("parse_returned_none", 0) + 1
                         )
                         continue
-                    if record["product_url"] in seen_urls:
+                    if record["product_url"] in seen_product_urls:
                         self.report.dropped["duplicate_across_categories"] = (
-                            self.report.dropped.get("duplicate_across_categories", 0) + 1
+                            self.report.dropped.get("duplicate_across_categories", 0)
+                            + 1
                         )
                         continue
-                    seen_urls.add(record["product_url"])
+                    seen_product_urls.add(record["product_url"])
                     results.append(record)
                     self.report.products_parsed += 1
                     added_any = True
 
                 if not added_any:
-                    # Pagination wrapped or all cards were duplicates — stop.
                     break
 
                 if not _has_next_page(html):
@@ -166,6 +234,26 @@ class PeterNyssenScraper:
 # ---------------------------------------------------------------------------
 
 
+def _category_label(segs: list[str]) -> str:
+    """Best-effort human-readable label from the URL path segments.
+
+    /spring-planting/dahlia-tubers.html         -> "Bulbs"
+    /spring-planting/dahlia-tubers/decorative-dahlias.html -> "Bulbs"
+    /autumn-planting/hardy-perennial-plants.html -> "Perennials"
+    /accessories.html                            -> "Accessories"
+    """
+    if not segs:
+        return ""
+    top = segs[0]
+    if top in ("spring-planting", "autumn-planting"):
+        # "perennial-tulips" is still a tulip (bulb); only the actual
+        # hardy-perennial-plants tree is the perennials category.
+        if len(segs) >= 2 and segs[1] == "hardy-perennial-plants":
+            return "Perennials"
+        return "Bulbs"
+    return top.replace("-", " ").title()
+
+
 def _extract_cards(html: str) -> list[dict]:
     soup = BeautifulSoup(html, "html.parser")
     out: list[dict] = []
@@ -179,7 +267,6 @@ def _extract_cards(html: str) -> list[dict]:
         name_el = el.select_one(".product-item-link") or link
         name = name_el.get_text(strip=True)
         if not name:
-            # fall back to image alt or aria-label
             img = el.select_one("img")
             if img is not None:
                 alt = img.get("alt")
@@ -205,7 +292,6 @@ def _extract_price(card) -> float | None:
     # Skip the strikethrough .old-price.
     price_el = card.select_one(".special-price .price, .normal-price .price")
     if price_el is None:
-        # First non-old-price span.price in the card.
         for span in card.select("span.price"):
             parents = " ".join(_class_chain(span))
             if "old-price" in parents:
@@ -233,7 +319,6 @@ def _extract_image(card) -> str | None:
         src = img.get("src") or img.get("data-src")
         if not isinstance(src, str):
             continue
-        # Skip the sale-overlay badges that live in /media/amasty/amlabel/.
         if "/amlabel/" in src:
             continue
         return src

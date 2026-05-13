@@ -21,10 +21,14 @@ from src.scrapers import (
     connecting_to_nature,
     cullen,
     david_austin,
+    doonwood,
+    dutch_bulbs,
     dutchgrown,
+    esker_daffodils,
     famous_roses,
     farmer_gracy,
     fluwel,
+    fruit_hill_farm,
     future_forests,
     gardens4you,
     greengardenflowerbulbs,
@@ -32,12 +36,14 @@ from src.scrapers import (
     hedgingie,
     hopeless_botanics,
     howbert_mays,
+    ireland_trees,
     johnstown,
     jparkers,
     mid_ulster,
     mount_venus,
     mr_middleton,
     newlands,
+    organic_centre,
     peter_nyssen,
     promesse,
     plant_store,
@@ -45,6 +51,7 @@ from src.scrapers import (
     quickcrop,
     rhs,
     rhs_urls,
+    seed_savers,
     tullys,
     windyridge,
 )
@@ -253,6 +260,34 @@ def main(params):
         case "peter_nyssen":
             export_data_locally(
                 table=peter_nyssen.get_product_data(),
+            )
+        case "ireland_trees":
+            export_data_locally(
+                table=ireland_trees.get_product_data(),
+            )
+        case "doonwood":
+            export_data_locally(
+                table=doonwood.get_product_data(),
+            )
+        case "fruit_hill_farm":
+            export_data_locally(
+                table=fruit_hill_farm.get_product_data(),
+            )
+        case "dutch_bulbs":
+            export_data_locally(
+                table=dutch_bulbs.get_product_data(),
+            )
+        case "organic_centre":
+            export_data_locally(
+                table=organic_centre.get_product_data(),
+            )
+        case "seed_savers":
+            export_data_locally(
+                table=seed_savers.get_product_data(),
+            )
+        case "esker_daffodils":
+            export_data_locally(
+                table=esker_daffodils.get_product_data(),
             )
         case "rhs_urls":
             export_data_locally(

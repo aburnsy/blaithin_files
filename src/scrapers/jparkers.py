@@ -6,16 +6,19 @@ and on ``section.productView-data`` as ``data-price``. The listing markup is
 ``ul.productGrid > li.product > a.card-wrapper`` (no ``.card-title a`` like
 QuickCrop). Single-price products are the norm — no variant resolution
 needed against ``/remote/v1/product-attributes``.
+
+Category discovery is sitemap-driven for full coverage: every
+``<loc>`` in ``/xmlsitemap.php?type=categories`` is walked.
 """
 
 from __future__ import annotations
 
-import importlib
 import re
 
 from bs4 import BeautifulSoup
 
 from src.scrapers.base import BaseScraper
+from src.scrapers.bigcommerce_sitemap import bc_category_urls
 from src.scrapers.http import RetryExhausted
 
 _BASE = "https://www.jparkers.com"
@@ -25,13 +28,10 @@ class JParkersScraper(BaseScraper):
     source = "jparkers"
     rate_limit_seconds = 0.6
 
-    def __init__(self, config_module: str = "config.jparkers"):
-        super().__init__()
-        self._config = importlib.import_module(config_module)
-
     def discover_categories(self) -> list[tuple[str, str]]:
         leaves: list[tuple[str, str]] = []
-        for base_url, category_name in self._config.data_sources:
+        for base_url in bc_category_urls(_BASE, log=self.log):
+            category_name = _slug_to_label(base_url)
             page = 1
             while True:
                 url = base_url if page == 1 else f"{base_url}?page={page}"
@@ -173,6 +173,11 @@ def _price_from_text(text: str) -> float | None:
         return None
 
 
-def get_product_data(config_file_name: str = "jparkers") -> list[dict]:
-    with JParkersScraper(config_module=f"config.{config_file_name}") as scraper:
+def _slug_to_label(url: str) -> str:
+    slug = url.rstrip("/").rsplit("/", 1)[-1]
+    return slug.replace("-", " ").title() if slug else ""
+
+
+def get_product_data() -> list[dict]:
+    with JParkersScraper() as scraper:
         return scraper.run()

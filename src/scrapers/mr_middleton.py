@@ -4,6 +4,10 @@ Same backbone as QuickcropScraper (BigCommerce Stencil). The only
 differences are the listing markup (Halo theme uses ``article.card``
 cards rather than ``ul.productGrid > li``) and the description block
 on PDPs (``#tab-description`` instead of QuickCrop's custom block).
+
+Category discovery is sitemap-driven for full coverage: every
+``<loc>`` in ``/xmlsitemap.php?type=categories`` is walked. The base
+class' config-driven seed list is bypassed.
 """
 
 from __future__ import annotations
@@ -12,7 +16,7 @@ import re
 
 from bs4 import BeautifulSoup
 
-from src.scrapers.quickcrop import QuickcropScraper, _as_str, _price_from_text
+from src.scrapers.quickcrop import QuickcropScraper, _as_str
 
 _BASE = "https://www.mrmiddleton.com"
 
@@ -20,9 +24,7 @@ _BASE = "https://www.mrmiddleton.com"
 class MrMiddletonScraper(QuickcropScraper):
     source = "mr_middleton"
     rate_limit_seconds = 0.6
-
-    def __init__(self, config_module: str = "config.mr_middleton"):
-        super().__init__(config_module=config_module)
+    _site_base = _BASE
 
     @staticmethod
     def _listing_has_grid(html: str) -> bool:
@@ -47,18 +49,6 @@ class MrMiddletonScraper(QuickcropScraper):
         return out
 
     @staticmethod
-    def _extract_page_price(soup: BeautifulSoup) -> float | None:
-        # Some MM products display "€22.00 - €149.99" price ranges on the PDP.
-        # quickcrop's _price_from_text strips separators and would parse
-        # "2200149.99" — take the first price token instead.
-        span = soup.find("span", class_="price price--withTax")
-        if not span:
-            return None
-        raw = span.get_text(strip=True)
-        m = re.search(r"(\d+(?:[.,]\d+)?)", raw)
-        return _price_from_text(m.group(1)) if m else None
-
-    @staticmethod
     def _extract_description(soup: BeautifulSoup) -> str | None:
         tab = soup.select_one("#tab-description")
         if tab is None:
@@ -70,6 +60,6 @@ class MrMiddletonScraper(QuickcropScraper):
         return text or None
 
 
-def get_product_data(config_file_name: str = "mr_middleton") -> list[dict]:
-    with MrMiddletonScraper(config_module=f"config.{config_file_name}") as scraper:
+def get_product_data() -> list[dict]:
+    with MrMiddletonScraper() as scraper:
         return scraper.run()

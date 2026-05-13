@@ -269,6 +269,12 @@ class MagentoGraphQLScraper(BaseScraper):
             self.log.info("graphql_page", page=page, products=len(items))
             for item in items:
                 self.report.products_in += 1
+                if not isinstance(item, dict):
+                    # Some Magento installs return null entries in the items
+                    # array for products the storefront can't render (deleted
+                    # / disabled SKUs still in the index). Skip silently.
+                    self._drop("null_item")
+                    continue
                 try:
                     rows = self.parse_records(item, source_url)
                 except Exception as e:  # noqa: BLE001
