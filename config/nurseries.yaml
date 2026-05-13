@@ -1,14 +1,19 @@
+# Shipping convention: for any nursery with `delivery_type: tiered` (or any
+# zoned/per-region rate sheet), the fees recorded here assume the customer
+# lives in Co. Tipperary. Use the Tipperary delivery rate when extracting
+# tiered fees from a site.
+
 tullys:
   display_name: "Tully's Nurseries"
   base_url: https://shop.tullynurseries.ie
   currency: EUR
-  vat_included: true
+  vat_included: false
   delivery_type: tiered
-  delivery_fees: []      # to be filled in from site
+  delivery_fees: [{ max_value_eur: 600, fee_eur: 60 }, { max_value_eur: null, fee_eur: 0 }]
   min_order_eur: 0
   runs_on: github-actions
   ships_live_plants_to_ireland: true
-  notes: "Currently returning ASP.NET error pages — site may be abandoned."
+  notes: "Trade portal shop.tullynurseries.ie shows prices ex-VAT — VAT must be added downstream. Shipping: €60 flat under €600, free over €600 (Tipperary rate)."
 
 arboretum:
   display_name: "Arboretum"
@@ -74,13 +79,13 @@ bulbi:
   display_name: "Bulbi.nl"
   base_url: https://www.bulbi.nl
   currency: EUR
-  vat_included: false
+  vat_included: true
   delivery_type: tiered
   delivery_fees: []
   min_order_eur: 25
   runs_on: self-hosted
   ships_live_plants_to_ireland: true
-  notes: "VAT may apply on import to Ireland. Bulbs and perennials."
+  notes: "Prices include VAT per their T&Cs Art. 5: 'Alle prijzen zijn vermeld in euro's, inclusief BTW en exclusief verzendkosten'. Bulbs and perennials."
 
 greengardenflowerbulbs:
   display_name: "GreenGardenFlowerBulbs.nl"
@@ -92,7 +97,7 @@ greengardenflowerbulbs:
   min_order_eur: 50
   runs_on: self-hosted
   ships_live_plants_to_ireland: true
-  notes: "Bulk bulbs. No VAT shown at checkout. Min order applies."
+  notes: "B2B-style bulb wholesaler — prices shown ex-VAT; IE customers pay 23% on top. Min order applies."
 
 hedgingie:
   display_name: "Hedging.ie"

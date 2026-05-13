@@ -71,19 +71,29 @@ def run_site(
             logf.write(f"# SCRAPE_MAX_AGE_DAYS={max_age}\n")
         logf.write("\n")
         logf.flush()
-        result = subprocess.run(
+
+        # Stream stdout/stderr line-by-line so we can prefix each line with a
+        # wall-clock timestamp — lets `tail -f <log>` show when the last update
+        # happened and makes post-mortem timing analysis trivial.
+        proc = subprocess.Popen(
             cmd,
             cwd=REPO_ROOT,
             env=env,
-            stdout=logf,
+            stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
+            bufsize=1,
         )
+        assert proc.stdout is not None
+        for line in proc.stdout:
+            logf.write(f"[{datetime.now().strftime('%H:%M:%S')}] {line}")
+            logf.flush()
+        returncode = proc.wait()
 
     elapsed = time.monotonic() - started
-    tag = "ok" if result.returncode == 0 else f"FAIL rc={result.returncode}"
+    tag = "ok" if returncode == 0 else f"FAIL rc={returncode}"
     print(f"[done ] {site:<12} {tag} in {elapsed:.1f}s", flush=True)
-    return site, result.returncode, elapsed, log_path
+    return site, returncode, elapsed, log_path
 
 
 def main(argv: list[str] | None = None) -> int:

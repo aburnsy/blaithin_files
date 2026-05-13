@@ -1,4 +1,5 @@
 import traceback
+from datetime import datetime
 
 import polars as pl
 from bs4 import BeautifulSoup
@@ -11,6 +12,11 @@ try:
 except ImportError:
     from common import ScrollToBottom
 import os
+
+
+def _log(msg: str) -> None:
+    """Print one line prefixed with HH:MM:SS, flushed immediately."""
+    print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}", flush=True)
 
 
 def extract_detailed_plant_data(plant: dict, plant_content) -> dict:
@@ -215,13 +221,36 @@ def get_plants_detail(plants: list[dict]) -> None:
     driver = webdriver.Chrome()
     if not os.path.exists("data\\rhs"):
         os.mkdir("data\\rhs")
-    for plant in plants:
+
+    total = len(plants)
+    cached = 0
+    fetched = 0
+    selenium_fallbacks = 0
+    errors = 0
+    progress_every = 50
+
+    _log(
+        f"RHS detail fetch starting — {total} plants total. "
+        f"Already-cached parquets in data/rhs/ are skipped."
+    )
+
+    for i, plant in enumerate(plants, start=1):
         plant_url = plant["plant_url"]
         file_name = f"data\\rhs\\{plant['id']}.parquet"
         if os.path.isfile(file_name):
+            cached += 1
+            if i % progress_every == 0:
+                _log(
+                    f"  [{i}/{total}] cached={cached} fetched={fetched} "
+                    f"selenium={selenium_fallbacks} errors={errors}"
+                )
             continue
+
+        _log(f"  [{i}/{total}] fetching {plant_url}")
+
         if (plant_page := session.get(plant_url)).status_code != 200:
-            print(f"Given plant URL '{plant_url}' is incorrect.")
+            _log(f"    -> HTTP {plant_page.status_code}; skipping.")
+            errors += 1
             continue
         try:
             extract = extract_detailed_plant_data(
@@ -230,7 +259,8 @@ def get_plants_detail(plants: list[dict]) -> None:
             )
         except Exception:
             try:
-                print(f"Trying Selenium {plant['plant_url']}")
+                _log("    -> HTML parse failed, retrying via Selenium.")
+                selenium_fallbacks += 1
                 driver.get(plant_url)
                 WebDriverWait(driver, 100).until(ScrollToBottom(driver, 2))
                 extract = extract_detailed_plant_data(
@@ -240,13 +270,24 @@ def get_plants_detail(plants: list[dict]) -> None:
 
             except Exception:
                 traceback.print_exc()
-                print(f"ERROR Could not fetch data for {plant['plant_url']}")
+                _log(f"    -> ERROR: could not fetch data for {plant_url}")
+                errors += 1
                 continue
 
         df = pl.DataFrame([extract])
-        # print(df)
         df.write_parquet(file_name)
+        fetched += 1
 
+        if i % progress_every == 0:
+            _log(
+                f"  [{i}/{total}] cached={cached} fetched={fetched} "
+                f"selenium={selenium_fallbacks} errors={errors}"
+            )
+
+    _log(
+        f"RHS detail fetch complete: cached={cached} fetched={fetched} "
+        f"selenium={selenium_fallbacks} errors={errors} (total={total})"
+    )
     driver.quit()
 
 

@@ -53,8 +53,10 @@ class BaseScraper(ABC):
     @abstractmethod
     def parse_product(
         self, html: str, product_url: str, source_url: str, category: str
-    ) -> dict | None:
-        """Given product page HTML, return a product dict or None to drop."""
+    ) -> dict | list[dict] | None:
+        """Given product page HTML, return a row, a list of rows (one per
+        variant), or None to drop. List return supports WooCommerce-style
+        variable products where each size emits its own row."""
 
     def fetch(self, url: str) -> str:
         """Default fetch: HTTP via httpx + tenacity. Override for JS rendering."""
@@ -100,8 +102,12 @@ class BaseScraper(ABC):
                     self._drop("parse_returned_none")
                     continue
 
-                results.append(record)
-                self.report.products_parsed += 1
+                rows = record if isinstance(record, list) else [record]
+                if not rows:
+                    self._drop("parse_returned_empty")
+                    continue
+                results.extend(rows)
+                self.report.products_parsed += len(rows)
 
         self.log.info(
             "scrape_complete",

@@ -1,10 +1,16 @@
 import json
 import urllib.parse
+from datetime import datetime
 from string import ascii_lowercase
 
 import polars as pl
 import requests
 from bs4 import BeautifulSoup
+
+
+def _log(msg: str) -> None:
+    """Print one line prefixed with HH:MM:SS, flushed immediately."""
+    print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}", flush=True)
 
 plant_type_mapping = {
     1: "Herbaceous Perennial",
@@ -40,7 +46,17 @@ def get_plant_urls(plant_types: list | None = None):
 
     plants = []
 
-    for plant_type in plant_types:
+    total_types = len(plant_types)
+    _log(f"RHS URL discovery starting — {total_types} plant types × 26 keyword letters")
+
+    for type_idx, plant_type in enumerate(plant_types, start=1):
+        type_label = plant_type_mapping.get(plant_type, str(plant_type))
+        type_total_before = len(plants)
+        _log(
+            f"  [{type_idx}/{total_types}] plant_type={plant_type} "
+            f"({type_label}) — querying a..z"
+        )
+
         for keywords in list(ascii_lowercase):
             temp_plants = []
             offset = 0
@@ -90,7 +106,6 @@ def get_plant_urls(plant_types: list | None = None):
                     botanical_name_html = urllib.parse.quote(botanical_name_html)
 
                     plant_url = f"https://www.rhs.org.uk/plants/{id}/{botanical_name_html}/details"
-                    # print(plant_url)
                     temp_plants.append(
                         {
                             "id": id,
@@ -103,7 +118,12 @@ def get_plant_urls(plant_types: list | None = None):
 
             plants.extend(temp_plants)
 
-    plants = pl.DataFrame(plants)
-    plants = plants.unique(maintain_order=True)
-    print(f"Found {len(plants)} products")
+        type_added = len(plants) - type_total_before
+        _log(
+            f"  [{type_idx}/{total_types}] plant_type={plant_type} ({type_label}) "
+            f"done — added {type_added} rows (running total {len(plants)})"
+        )
+
+    plants = pl.DataFrame(plants).unique(maintain_order=True).to_dicts()
+    _log(f"Found {len(plants)} products")
     return plants

@@ -1,206 +1,332 @@
-#!/usr/bin/env python
+"""Caragh Nurseries scraper — WooCommerce, no JS rendering needed.
+
+Caragh's product pages use WooCommerce's variable-product pattern: the
+full per-variation pricing/stock data is embedded as a JSON blob on the
+``<form class="variations_form">`` element via the
+``data-product_variations`` attribute. We read it straight from the
+static HTML — no Selenium, no dropdown iteration, no stale-element
+exceptions.
+
+For non-variable products we read the single price/stock from the
+WooCommerce price span / ``.stock`` element.
+"""
+
+from __future__ import annotations
+
+import html as _htmllib
 import importlib
+import json
 import re
 
 from bs4 import BeautifulSoup
-from requests_html import HTMLSession
-from selenium import webdriver
-from selenium.common.exceptions import (
-    NoSuchElementException,
-    StaleElementReferenceException,
-    TimeoutException,
-)
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import Select, WebDriverWait
+
+from src.scrapers.base import BaseScraper
+from src.scrapers.http import RetryExhausted
+
+_BASE = "https://caraghnurseries.ie"
 
 
-def selenium_setup() -> webdriver:
-    from selenium.webdriver.chrome.options import Options
+class CaraghScraper(BaseScraper):
+    source = "carragh"
+    rate_limit_seconds = 1.0
 
-    opts = Options()
-    opts.add_argument("--headless=new")
-    opts.add_argument("--no-sandbox")
-    opts.add_argument("--disable-dev-shm-usage")
-    opts.add_argument("--disable-gpu")
-    opts.add_argument("--window-size=1400,900")
-    return webdriver.Chrome(options=opts)
+    def __init__(self, config_module: str = "config.carragh"):
+        super().__init__()
+        self._config = importlib.import_module(config_module)
 
+    def discover_categories(self) -> list[tuple[str, str]]:
+        """Walk each configured category, paginating ``/page/<n>/`` until empty."""
+        leaves: list[tuple[str, str]] = []
+        for base_url, category_name in self._config.data_sources:
+            page = 1
+            while True:
+                url = base_url if page == 1 else f"{base_url.rstrip('/')}/page/{page}/"
+                listing_html = self._safe_fetch(url)
+                if not listing_html or not self._listing_has_products(listing_html):
+                    break
+                leaves.append((url, category_name))
+                page += 1
+        return leaves
 
-numeric_pattern_compiled = re.compile(r"(\d+)")
-
-_VARIATION_PRICE_JS = (
-    "var b = document.querySelector("
-    "'div.woocommerce-variation.single_variation bdi'); "
-    "return b ? b.innerText.trim() : '';"
-)
-_FALLBACK_PRICE_JS = (
-    "var nodes = document.querySelectorAll('span.woocommerce-Price-amount bdi'); "
-    "for (var n of nodes) {"
-    "  if (n.offsetParent !== null && n.innerText.trim()) "
-    "    return n.innerText.trim();"
-    "} return '';"
-)
-_STOCK_JS = (
-    "var p = document.querySelector('p.stock.in-stock'); "
-    "return p ? p.innerText : '';"
-)
-
-
-def extract_price_from_text(price_str):
-    return float(re.sub(r"[^\d.\.]", "", price_str))
-
-
-def fetch_data_interactive(
-    product_url: str, source_url: str, category: str, driver: webdriver
-) -> list:
-    """There are multiple options for this product. Hence we need to make a selection and come back to this one"""
-    results = []
-
-    driver.get(product_url)
-
-    select_xpath = None
-    for candidate in (
-        '//select[@id="pa_pot-size"]',
-        '//select[@id="pa_variation"]',
-        '//select[@id="pa_size"]',
-        '//select[@id="pa_colour"]',
-    ):
+    def _safe_fetch(self, url: str) -> str:
         try:
-            select_element = driver.find_element(By.XPATH, candidate)
-            select_xpath = candidate
-            break
-        except NoSuchElementException:
-            continue
-    if select_xpath is None:
-        print(f"Error fetching data for {product_url}. No dropdown options found.")
+            return self.fetch(url)
+        except RetryExhausted as e:
+            # 404 past last page is expected; quiet log + stop pagination.
+            if "404" in str(e):
+                self.log.debug("pagination_end", url=url)
+                return ""
+            self.log.warning("listing_fetch_failed", url=url, error=str(e))
+            return ""
+
+    @staticmethod
+    def _listing_has_products(html: str) -> bool:
+        soup = BeautifulSoup(html, "html.parser")
+        return bool(
+            soup.find("ul", class_=re.compile(r"\bproducts\b"))
+            and soup.find("li", class_=re.compile(r"\bproduct\b"))
+        )
+
+    def parse_listing(self, html: str) -> list[str]:
+        """Return deduplicated product URLs from a Carragh category page."""
+        soup = BeautifulSoup(html, "html.parser")
+        seen: set[str] = set()
+        unique: list[str] = []
+        for a in soup.find_all("a", href=True):
+            href = _as_str(a.get("href"))
+            if not href:
+                continue
+            if "caraghnurseries.ie/product/" in href and "product-category" not in href:
+                url = re.sub(r"^https?://(?:www\.)?caraghnurseries\.ie", _BASE, href)
+                url = url.split("?", 1)[0].rstrip("/")
+                if url not in seen:
+                    seen.add(url)
+                    unique.append(url)
+        return unique
+
+    def parse_product(
+        self, html: str, product_url: str, source_url: str, category: str
+    ) -> dict | list[dict] | None:
+        soup = BeautifulSoup(html, "html.parser")
+
+        product_name = self._extract_product_name(soup)
+        if not product_name:
+            return None
+
+        description = self._extract_description(soup)
+        default_image = self._extract_default_image(soup)
+
+        # Variable product? Read every variant from data-product_variations.
+        variants = self._extract_variations(soup)
+        if variants:
+            return [
+                {
+                    "source": self.source,
+                    "source_url": source_url,
+                    "product_url": product_url,
+                    "category": category,
+                    "product_name": product_name,
+                    "img_url": v.get("img_url") or default_image,
+                    "description": description,
+                    "price": v.get("price"),
+                    "size": v.get("size"),
+                    "stock": v.get("stock"),
+                }
+                for v in variants
+            ]
+
+        # Simple product — single price/stock.
+        return {
+            "source": self.source,
+            "source_url": source_url,
+            "product_url": product_url,
+            "category": category,
+            "product_name": product_name,
+            "img_url": default_image,
+            "description": description,
+            "price": self._extract_simple_price(soup),
+            "size": self._extract_simple_size(soup, product_name),
+            "stock": self._extract_simple_stock(soup),
+        }
+
+    # ------------------------------------------------------------------
+    # WooCommerce extraction helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _extract_product_name(soup: BeautifulSoup) -> str | None:
+        for sel in (".product_title.entry-title", "h1.product_title", "h1"):
+            el = soup.select_one(sel)
+            if el:
+                name = el.get_text(strip=True)
+                if name:
+                    return name
         return None
 
-    product_name = driver.find_element(
-        By.XPATH, '//h1[@class="product_title entry-title"]'
-    ).get_attribute("innerText")
-
-    try:
-        img_url = (
-            driver.find_element(
-                By.XPATH, '//div[@class="woocommerce-product-gallery__image"]'
-            )
-            .find_element(By.TAG_NAME, "img")
-            .get_attribute("src")
+    @staticmethod
+    def _extract_description(soup: BeautifulSoup) -> str | None:
+        # Short description (above-the-fold) is preferred for matching.
+        short = soup.select_one(".woocommerce-product-details__short-description")
+        if short:
+            text = short.get_text(" ", strip=True)
+            if text:
+                return text
+        long_desc = soup.select_one("#tab-description") or soup.select_one(
+            ".woocommerce-Tabs-panel--description"
         )
-    except NoSuchElementException:
-        img_url = None
+        if long_desc:
+            text = long_desc.get_text(" ", strip=True)
+            if text:
+                return text
+        return None
 
-    try:
-        description = (
-            driver.find_element(By.XPATH, '//div[@id="tab-description"]')
-            .find_element(By.TAG_NAME, "p")
-            .get_attribute("innerText")
-        )
-    except NoSuchElementException:
+    @staticmethod
+    def _extract_default_image(soup: BeautifulSoup) -> str | None:
+        img = soup.select_one(".woocommerce-product-gallery__image img")
+        if not img:
+            return None
+        for key in ("src", "data-large_image", "data-src"):
+            val = _as_str(img.get(key))
+            if val:
+                return val
+        srcset = _as_str(img.get("srcset"))
+        if srcset:
+            return srcset.split(" ", 1)[0]
+        return None
+
+    def _extract_variations(self, soup: BeautifulSoup) -> list[dict]:
+        """Read WooCommerce's per-variation JSON from the form's data attribute."""
+        form = soup.find("form", class_=re.compile(r"\bvariations_form\b"))
+        if not form:
+            return []
+        raw = _as_str(form.get("data-product_variations"))
+        if not raw:
+            return []
+        # WooCommerce HTML-escapes the JSON inside the attribute value
+        # (e.g. &quot; for ", &amp; for &). Decode before parsing.
         try:
-            description = driver.find_element(
-                By.XPATH,
-                '//section[@class="template-article__editor-content editor-content"]',
-            ).get_attribute("innerText")
-        except NoSuchElementException:
-            description = None
+            data = json.loads(_htmllib.unescape(raw))
+        except json.JSONDecodeError as e:
+            self.log.warning("variations_json_parse_failed", error=str(e))
+            return []
+        if not isinstance(data, list):
+            return []
 
-    # Snapshot all option values up front — the select itself may be re-rendered
-    # by WooCommerce after each selection, so the element list can go stale.
-    option_pairs: list[tuple[str, str]] = []
-    for option in select_element.find_elements(By.TAG_NAME, "option"):
-        value = option.get_attribute("value")
-        name = option.get_attribute("innerText")
-        if value and value != "Choose an option":
-            option_pairs.append((value, name))
-
-    for option_value, option_name in option_pairs:
-        try:
-            fresh_select_element = driver.find_element(By.XPATH, select_xpath)
-            Select(fresh_select_element).select_by_value(option_value)
-        except (StaleElementReferenceException, NoSuchElementException):
-            print(
-                f"Skip option {option_value!r} (stale/missing). URL: {product_url}"
-            )
-            continue
-
-        # The woocommerce-variation div is empty in the static HTML; WooCommerce
-        # JS populates it (with a <bdi> price element) asynchronously after the
-        # option is selected. Read the price via execute_script so we don't
-        # hold a WebElement reference that can go stale across the re-render.
-        try:
-            price = WebDriverWait(driver, 10).until(
-                lambda d: d.execute_script(_VARIATION_PRICE_JS) or False
-            )
-        except TimeoutException:
-            # Fallback: variations sometimes render their price outside the
-            # single_variation block — take the first visible bdi inside any
-            # woocommerce-Price-amount span.
-            price = driver.execute_script(_FALLBACK_PRICE_JS)
-            if not price:
-                print(
-                    f"No price for {option_value} on {product_url}. Skipping."
-                )
+        out: list[dict] = []
+        for entry in data:
+            if not isinstance(entry, dict):
                 continue
-        price_inc_vat = extract_price_from_text(price)
+            out.append(
+                {
+                    "price": _to_float(entry.get("display_price")),
+                    "size": _pick_size_attribute(entry.get("attributes")),
+                    "stock": _variant_stock(entry),
+                    "img_url": _variant_image(entry.get("image")),
+                }
+            )
+        return out
 
-        stock_str = driver.execute_script(_STOCK_JS) or ""
-        stock_search = re.search(numeric_pattern_compiled, stock_str)
-        stock = stock_search.group(0) if stock_search else 0
-
-        # Leave as raw information - we will process this in silver layer
-        size = option_name
-
-        results.append(
-            {
-                "source": "carragh",
-                "source_url": source_url,
-                "product_url": product_url,
-                "category": category,
-                "product_name": product_name,
-                "img_url": img_url,
-                "description": description,
-                "price": price_inc_vat,
-                "size": size,
-                "stock": stock,
-            }
+    @staticmethod
+    def _extract_simple_price(soup: BeautifulSoup) -> float | None:
+        bdi = soup.select_one("p.price .woocommerce-Price-amount bdi") or soup.select_one(
+            ".woocommerce-Price-amount bdi"
         )
-    return results
+        if not bdi:
+            return None
+        text = bdi.get_text(strip=True)
+        cleaned = re.sub(r"[^\d.,]", "", text).replace(",", ".")
+        parts = cleaned.rsplit(".", 1)
+        if len(parts) == 2 and len(parts[1]) <= 2:
+            cleaned = parts[0].replace(".", "") + "." + parts[1]
+        try:
+            return float(cleaned) if cleaned else None
+        except ValueError:
+            return None
+
+    @staticmethod
+    def _extract_simple_stock(soup: BeautifulSoup) -> int | None:
+        out_el = soup.select_one("p.stock.out-of-stock, .stock.out-of-stock")
+        if out_el:
+            return 0
+        in_el = soup.select_one("p.stock.in-stock, .stock.in-stock")
+        if in_el:
+            text = in_el.get_text(strip=True)
+            m = re.search(r"(\d+)", text)
+            return int(m.group(1)) if m else 1
+        return None
+
+    @staticmethod
+    def _extract_simple_size(soup: BeautifulSoup, product_name: str) -> str | None:
+        # Look in the "additional information" table for a pot size row.
+        for row in soup.select(
+            "table.shop_attributes tr, table.woocommerce-product-attributes tr"
+        ):
+            label_el = row.find("th")
+            value_el = row.find("td")
+            if not (label_el and value_el):
+                continue
+            label = label_el.get_text(strip=True).lower()
+            if "pot" in label or "size" in label:
+                value = value_el.get_text(strip=True)
+                if value:
+                    return value
+        # Fallback: size-looking substring in the product name (e.g. "18L").
+        m = re.search(r"\b\d+\s*(?:L|cm|m)\b", product_name)
+        return m.group(0) if m else None
 
 
-def parse_url(URL: str, category: str, driver: webdriver) -> list[dict]:
-    print(f"Fetching data for {category} from {URL}")
-    session = HTMLSession()
-    page_number = 1
-    results = []
-
-    while (page := session.get(f"{URL}/page/{page_number}")).status_code == 200:
-        content = BeautifulSoup(page.content, "html.parser")
-        products = content.find(
-            "ul", class_="products elementor-grid columns-3"
-        ).find_all("li")
-
-        for product in products:
-            product_url = product.a["href"]
-            if result := fetch_data_interactive(
-                product_url=product_url,
-                source_url=URL,
-                category=category,
-                driver=driver,
-            ):
-                results.extend(result)
-        page_number += 1
-
-    print(f"Found {len(results)} products for {category}")
-
-    return results
+# ---------------------------------------------------------------------------
+# Module-level helpers (testable without instantiating the scraper)
+# ---------------------------------------------------------------------------
 
 
-def get_product_data(config_file_name: str = "carragh") -> list[dict] | None:
-    config = importlib.import_module("config." + config_file_name)
-    results = []
-    driver = selenium_setup()
-    for URL, category in config.data_sources:
-        results.extend(parse_url(URL=URL, category=category, driver=driver))
-    driver.quit()
-    return results
+def _as_str(v) -> str | None:
+    """BeautifulSoup attribute getters can return list/None — normalise to str|None."""
+    if v is None:
+        return None
+    if isinstance(v, str):
+        return v
+    if isinstance(v, list) and v:
+        first = v[0]
+        return first if isinstance(first, str) else None
+    return None
+
+
+def _to_float(v) -> float | None:
+    try:
+        return float(v) if v is not None and v != "" else None
+    except (ValueError, TypeError):
+        return None
+
+
+def _pick_size_attribute(attrs) -> str | None:
+    """Pick the most size-like attribute value from a WooCommerce variation dict."""
+    if not isinstance(attrs, dict):
+        return None
+    preferred: str | None = None
+    fallback: str | None = None
+    for k, v in attrs.items():
+        if not v:
+            continue
+        val = str(v)
+        key = str(k).lower()
+        if "pot-size" in key or key.endswith("size"):
+            preferred = val
+            break
+        if fallback is None:
+            fallback = val
+    return preferred or fallback
+
+
+def _variant_stock(entry: dict) -> int | None:
+    """Derive a stock count from a variation entry, mirroring WooCommerce semantics."""
+    max_qty = entry.get("max_qty")
+    if isinstance(max_qty, (int, float)) and max_qty:
+        return int(max_qty)
+    is_in_stock = entry.get("is_in_stock")
+    if is_in_stock is True:
+        return 1
+    if is_in_stock is False:
+        return 0
+    return None
+
+
+def _variant_image(image) -> str | None:
+    if not isinstance(image, dict):
+        return None
+    for key in ("src", "full_src", "thumb_src"):
+        val = image.get(key)
+        if isinstance(val, str) and val:
+            return val
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Backward-compat shim — load_bronze_data.py calls get_product_data()
+# ---------------------------------------------------------------------------
+
+
+def get_product_data(config_file_name: str = "carragh") -> list[dict]:
+    """Backward-compat shim — runs the new scraper and returns the legacy list."""
+    with CaraghScraper(config_module=f"config.{config_file_name}") as scraper:
+        return scraper.run()

@@ -1,303 +1,405 @@
-#!/usr/bin/env python
+"""QuickCrop Ireland scraper — BigCommerce Stencil, no JS rendering needed.
+
+QuickCrop is a BigCommerce store. For products with size/variant options the
+price update on the product page is driven by an XHR call to BigCommerce's
+public storefront endpoint::
+
+    POST /remote/v1/product-attributes/<product_id>
+    body: action=add&product_id=<id>&attribute[<attr_id>]=<value_id>
+
+We call that endpoint directly with httpx — one short request per option —
+instead of driving Selenium through the dropdown. Single-price products
+parse straight from the product page HTML.
+"""
+
+from __future__ import annotations
+
 import importlib
+import json
 import re
-import time
+from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
-from requests_html import HTMLSession
-from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException, TimeoutException
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions
-from selenium.webdriver.support.ui import Select, WebDriverWait
+
+from src.scrapers.base import BaseScraper
+from src.scrapers.http import RetryExhausted
+
+_BASE = "https://www.quickcrop.ie"
+
+_MULTIBUY_PATTERNS = (
+    re.compile(r"(\d+) x \w+", re.IGNORECASE),
+    re.compile(r"(\d+) Tree", re.IGNORECASE),
+    re.compile(r"(\d+) Pack", re.IGNORECASE),
+    re.compile(r"(\d+) Plant", re.IGNORECASE),
+)
 
 
-def selenium_setup() -> webdriver:
-    from selenium.webdriver.chrome.options import Options
+class QuickcropScraper(BaseScraper):
+    source = "quickcrop"
+    rate_limit_seconds = 0.5
 
-    opts = Options()
-    opts.add_argument("--headless=new")
-    opts.add_argument("--no-sandbox")
-    opts.add_argument("--disable-dev-shm-usage")
-    opts.add_argument("--disable-gpu")
-    opts.add_argument("--window-size=1400,900")
-    driver = webdriver.Chrome(options=opts)
-    driver.get("https://www.quickcrop.ie")
-    try:
-        WebDriverWait(driver, 5).until(
-            expected_conditions.element_to_be_clickable(
-                (
-                    By.XPATH,
-                    "//button[@class='sd-button-widget calashock-categories-widget__button button button--primary'][text()='ACCEPT ALL COOKIES']",
-                )
-            )
-        ).click()
-    except TimeoutException:
-        print("Error accepting cookies modal. We will assume this is unnecessary...")
+    def __init__(self, config_module: str = "config.quickcrop"):
+        super().__init__()
+        self._config = importlib.import_module(config_module)
 
-    ## Implicit waits weren't working. The modal seems to take time to close
-    time.sleep(1)
+    def discover_categories(self) -> list[tuple[str, str]]:
+        """Paginate ``?page=N`` for each configured category until the grid is empty."""
+        leaves: list[tuple[str, str]] = []
+        for base_url, category_name in self._config.data_sources:
+            page = 1
+            while True:
+                url = base_url if page == 1 else f"{base_url}?page={page}"
+                html = self._safe_fetch(url)
+                if not html or not self._listing_has_grid(html):
+                    break
+                leaves.append((url, category_name))
+                page += 1
+        return leaves
 
-    return driver
-
-
-multibuy_pattern_deal = re.compile(r"(\d+ x \w+)")
-multibuy_pattern_trees = re.compile(r"(\d+ Tree)", flags=re.IGNORECASE)
-multibuy_pattern_pack = re.compile(r"(\d+ Pack)", flags=re.IGNORECASE)
-multibuy_pattern_plant = re.compile(r"(\d+ Plant)", flags=re.IGNORECASE)
-numeric_pattern_compiled = re.compile(r"(\d+)")
-
-
-def extract_quantity_from_text(product_text: str) -> int:
-    multibuy_str = (
-        re.search(multibuy_pattern_deal, product_text)
-        or re.search(multibuy_pattern_trees, product_text)
-        or re.search(multibuy_pattern_pack, product_text)
-        or re.search(multibuy_pattern_plant, product_text)
-    )
-    if multibuy_str:
-        quantity = int(
-            re.search(numeric_pattern_compiled, multibuy_str.group(0)).group(0)
-        )
-    else:
-        quantity = 1
-    return quantity
-
-
-# size_pattern_litres = re.compile(r"(0?\.?\d+\s?L)")
-# size_pattern_centimetres = re.compile(r"(\d+\s?-\s?\d+\s?cm)", flags=re.IGNORECASE)
-
-
-# def extract_size_from_text(text: str) -> str:
-#     size_str = re.search(size_pattern_litres, text)
-#     if size_str:
-#         size = size_str.group(0).replace(" L", "L")
-#     else:
-#         size_str = re.search(size_pattern_centimetres, text)
-#         if size_str:
-#             size = size_str.group(0)
-#         else:
-#             if "tree" in text.lower() or "crown" in text.lower():
-#                 size = None
-#             elif text.lower() in ["small", "medium", "large"]:
-#                 size = text.lower()
-#             else:
-#                 size = "9 cm"  # Size isn't specified so we default to 9cm
-#     return size
-
-
-def extract_price_from_text(price_str):
-    return float(re.sub(r"[^\d.\.]", "", price_str))
-
-
-def fetch_data_interactive(
-    product_url: str, source_url: str, category: str, driver: webdriver
-) -> list:
-    """There are multiple options for this product. Hence we need to make a selection and come back to this one"""
-    results = []
-
-    driver.get(product_url)
-    select_element = driver.find_element(
-        By.XPATH, '//select[@class="form-select form-select--small"]'
-    )
-    select = Select(select_element)
-
-    price = driver.find_element(
-        By.XPATH, '//span[@class="price price--withTax"]'
-    ).get_attribute("innerHTML")
-    product_name = (
-        driver.find_element(By.XPATH, '//h1[@class="productView-title"]')
-        .get_attribute("innerHTML")
-        .split(" - ")[0]
-    )
-    img_url = (
-        driver.find_element(By.XPATH, '//div[@class="productView-img-container"]')
-        .find_element(By.TAG_NAME, "img")
-        .get_attribute("src")
-    )
-
-    desc_base = driver.find_element(
-        By.XPATH, '//div[@id="custom-product-short-description"]'
-    )
-    # find_elements returns empty list if not found
-    description_lst = desc_base.find_elements(By.TAG_NAME, "li")
-    if len(description_lst) > 0:
-        description = "\n".join(
-            [element.get_attribute("innerHTML") for element in description_lst]
-        )
-    else:
+    def _safe_fetch(self, url: str) -> str:
         try:
-            description = (
-                desc_base.find_element(By.TAG_NAME, "p")
-                .get_attribute("innerHTML")
-                .strip()
+            return self.fetch(url)
+        except RetryExhausted as e:
+            self.log.warning("listing_fetch_failed", url=url, error=str(e))
+            return ""
+
+    @staticmethod
+    def _listing_has_grid(html: str) -> bool:
+        soup = BeautifulSoup(html, "html.parser")
+        grid = soup.find("ul", class_="productGrid")
+        if grid is None:
+            return False
+        return bool(grid.find("li"))
+
+    def parse_listing(self, html: str) -> list[str]:
+        soup = BeautifulSoup(html, "html.parser")
+        grid = soup.find("ul", class_="productGrid")
+        if grid is None:
+            return []
+        out: list[str] = []
+        seen: set[str] = set()
+        for li in grid.find_all("li"):
+            card_title = li.find(class_="card-title")
+            if card_title is None or card_title.a is None:
+                continue
+            href = _as_str(card_title.a.get("href"))
+            if not href:
+                continue
+            url = re.sub(r"^https?://(?:www\.)?quickcrop\.ie", _BASE, href).split("?", 1)[0]
+            if url not in seen:
+                seen.add(url)
+                out.append(url)
+        return out
+
+    def parse_product(
+        self, html: str, product_url: str, source_url: str, category: str
+    ) -> dict | list[dict] | None:
+        soup = BeautifulSoup(html, "html.parser")
+
+        product_name = self._extract_product_name(soup)
+        if not product_name:
+            return None
+        description = self._extract_description(soup)
+        img_url = self._extract_image(soup)
+
+        # Try variant path: find a <select> with attribute[N] name + product_id.
+        variant_rows = self._maybe_extract_variants(
+            soup,
+            product_url=product_url,
+            source_url=source_url,
+            category=category,
+            product_name=product_name,
+            description=description,
+            img_url=img_url,
+        )
+        if variant_rows is not None:
+            return variant_rows
+
+        # Simple product — single price/stock from the product page.
+        price = self._extract_page_price(soup)
+        stock = self._extract_page_stock(soup)
+        return {
+            "source": self.source,
+            "source_url": source_url,
+            "product_url": product_url,
+            "category": category,
+            "product_name": product_name,
+            "img_url": img_url,
+            "description": description,
+            "price": price,
+            "size": None,
+            "stock": stock,
+            "quantity": _extract_quantity(product_name),
+        }
+
+    # ------------------------------------------------------------------
+    # Extraction helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _extract_product_name(soup: BeautifulSoup) -> str | None:
+        el = soup.find("h1", class_="productView-title")
+        if not el:
+            return None
+        raw = el.get_text(strip=True)
+        return raw.split(" - ", 1)[0] if raw else None
+
+    @staticmethod
+    def _extract_description(soup: BeautifulSoup) -> str | None:
+        desc_base = soup.find("div", id="custom-product-short-description")
+        if not desc_base:
+            return None
+        items = desc_base.find_all("li")
+        if items:
+            return "\n".join(li.get_text(strip=True) for li in items)
+        p = desc_base.find("p")
+        if p:
+            return p.get_text(strip=True) or None
+        text = desc_base.get_text(strip=True)
+        return text or None
+
+    @staticmethod
+    def _extract_image(soup: BeautifulSoup) -> str | None:
+        container = soup.find("div", class_="productView-img-container")
+        if not container:
+            return None
+        img = container.find("img")
+        if not img:
+            return None
+        return _as_str(img.get("src")) or _as_str(img.get("data-src"))
+
+    @staticmethod
+    def _extract_page_price(soup: BeautifulSoup) -> float | None:
+        span = soup.find("span", class_="price price--withTax")
+        if not span:
+            return None
+        return _price_from_text(span.get_text(strip=True))
+
+    @staticmethod
+    def _extract_page_stock(soup: BeautifulSoup) -> int | None:
+        span = soup.find("span", attrs={"data-product-stock": ""})
+        if not span:
+            return None
+        text = span.get_text(strip=True)
+        try:
+            return int(text)
+        except ValueError:
+            return None
+
+    # ------------------------------------------------------------------
+    # BigCommerce variant resolution
+    # ------------------------------------------------------------------
+
+    def _maybe_extract_variants(
+        self,
+        soup: BeautifulSoup,
+        *,
+        product_url: str,
+        source_url: str,
+        category: str,
+        product_name: str,
+        description: str | None,
+        img_url: str | None,
+    ) -> list[dict] | None:
+        """Return one row per variant, or None if this isn't a variant product."""
+        select = soup.find("select", class_=re.compile(r"\bform-select\b"))
+        if select is None:
+            return None
+        name_attr = _as_str(select.get("name")) or ""
+        attr_match = re.search(r"attribute\[(\d+)\]", name_attr)
+        if not attr_match:
+            return None
+        attribute_id = attr_match.group(1)
+
+        product_id = self._extract_product_id(soup)
+        if product_id is None:
+            self.log.warning("variant_product_id_missing", url=product_url)
+            return None
+
+        options: list[tuple[str, str]] = []
+        for opt in select.find_all("option"):
+            value = _as_str(opt.get("value")) or ""
+            label = opt.get_text(strip=True)
+            if not value or label.lower() in ("", "see options", "choose options"):
+                continue
+            options.append((value, label))
+        if not options:
+            return None
+
+        rows: list[dict] = []
+        for value, label in options:
+            price, stock = self._fetch_variant_attrs(
+                product_id=product_id,
+                attribute_id=attribute_id,
+                value_id=value,
+                product_url=product_url,
             )
-        except NoSuchElementException:
-            description = desc_base.get_attribute("innerHTML").strip()
-
-    for option in select_element.find_elements(By.TAG_NAME, "option"):
-        option_value = option.get_attribute("value")
-        option_name = option.get_attribute("innerHTML")
-        if option_value == "" or option_name == "See Options":
-            continue
-        else:
-            # Wait for the price element to change after making a selection
-            select.select_by_value(option_value)
-            try:
-                WebDriverWait(driver, 10).until_not(
-                    expected_conditions.text_to_be_present_in_element(
-                        (By.XPATH, '//span[@class="price price--withTax"]'), price
-                    )
-                )
-            except TimeoutException:
-                print(
-                    f"timeout when fetching price for {option_name} from {product_url}"
-                )
-
-            price = driver.find_element(
-                By.XPATH, '//span[@class="price price--withTax"]'
-            ).get_attribute("innerHTML")
-            try:
-                stock = int(
-                    driver.find_element(
-                        By.XPATH, '//span[@data-product-stock=""]'
-                    ).get_attribute("innerHTML")
-                )
-            except NoSuchElementException:
-                stock = 0
-
-            ## In this case it seems QQ don't display the stock. Any amount of stock can be purchased, so lets set to 100
-            except ValueError:
-                stock = 100
-
-            price_inc_vat = extract_price_from_text(price)
-            size = option_name
-            quantity = extract_quantity_from_text(option_name)
-            results.append(
+            rows.append(
                 {
-                    "source": "quickcrop",
+                    "source": self.source,
                     "source_url": source_url,
                     "product_url": product_url,
                     "category": category,
                     "product_name": product_name,
                     "img_url": img_url,
                     "description": description,
-                    "price": price_inc_vat,
-                    "size": size,
+                    "price": price,
+                    "size": label,
                     "stock": stock,
-                    "quantity": quantity,
+                    "quantity": _extract_quantity(label),
                 }
             )
-    return results
+        return rows
 
-
-def fetch_data(
-    product_url: str, source_url: str, category: str, session: HTMLSession
-) -> dict:
-    product_page = session.get(product_url)
-    product_content = BeautifulSoup(product_page.content, "html.parser")
-
-    product_name_str = product_content.find("h1", class_="productView-title").text
-    product_name = product_name_str.split(" - ")[0]
-    image = product_content.find("div", class_="productView-img-container").img
-    img_url = image["src"]
-    price_inc_vat_str = product_content.find("span", class_="price price--withTax").text
-    price_inc_vat = extract_price_from_text(price_inc_vat_str)
-
-    size = "9 cm"  # Size isn't specified so we default to 9cm
-
-    quantity = extract_quantity_from_text(product_name_str)
-    try:
-        stock = int(
-            product_content.find(
-                "div", class_="form-field form-field--stock"
-            ).label.span.text
-        )
-    except AttributeError:
-        stock = 0
-
-    try:
-        desc_base = product_content.find("div", id="custom-product-short-description")
-        description_lst = desc_base.ul.find_all("li")
-        description = "\n".join([element.text for element in description_lst])
-    except AttributeError:
-        try:
-            description = desc_base.p.text.strip()
-        except AttributeError:
-            description = desc_base.text.strip()
-
-    return {
-        "source": "quickcrop",
-        "source_url": source_url,
-        "product_url": product_url,
-        "category": category,
-        "product_name": product_name,
-        "img_url": img_url,
-        "description": description,
-        "price": price_inc_vat,
-        "size": size,
-        "stock": stock,
-        "quantity": quantity,
-    }
-
-
-def parse_url(URL: str, category: str, driver: webdriver) -> list[dict]:
-    print(f"Fetching data for {category} from {URL}")
-    session = HTMLSession()
-    page_number = 1
-    results = []
-
-    while (page := session.get(f"{URL}?page={page_number}")).status_code == 200:
-        content = BeautifulSoup(page.content, "html.parser")
-        grid = content.find("ul", class_="productGrid")
-        if grid is None:
-            # quickcrop returns 200 with an empty body past the last page,
-            # so we break on missing grid rather than HTTP status.
-            break
-        products = grid.find_all("li")
-        if not products:
-            break
-
-        for product in products:
-            card_title = product.find(class_="card-title")
-            if card_title is None or card_title.a is None:
+    @staticmethod
+    def _extract_product_id(soup: BeautifulSoup) -> str | None:
+        # Hidden input on the add-to-cart form is the most reliable source.
+        hidden = soup.find("input", attrs={"name": "product_id"})
+        if hidden is not None:
+            val = _as_str(hidden.get("value"))
+            if val and val.isdigit():
+                return val
+        # Form action sometimes encodes it: /cart.php?action=add&product_id=123
+        form = soup.find("form", attrs={"data-cart-item-add": True})
+        if form is not None:
+            action = _as_str(form.get("action")) or ""
+            m = re.search(r"product_id=(\d+)", action)
+            if m:
+                return m.group(1)
+        # Last resort — JSON-LD productID.
+        for script in soup.find_all("script", type="application/ld+json"):
+            try:
+                data = json.loads(script.string or "")
+            except (json.JSONDecodeError, TypeError):
                 continue
-            product_url = card_title.a["href"]
+            graph = data.get("@graph", [data])
+            for item in graph:
+                pid = item.get("productID") or item.get("sku")
+                if isinstance(pid, str) and pid.isdigit():
+                    return pid
+        return None
 
-            price_inc_vat_str = product.find("span", class_="price price--withTax").text
-            if "-" in price_inc_vat_str:
-                # print(f"Parsing product(s) from URL {product_url} using selenium")
-                results.extend(
-                    fetch_data_interactive(
-                        product_url=product_url,
-                        source_url=URL,
-                        category=category,
-                        driver=driver,
-                    )
-                )
-            else:
-                # print(f"Parsing product from URL {product_url}")
+    def _fetch_variant_attrs(
+        self,
+        *,
+        product_id: str,
+        attribute_id: str,
+        value_id: str,
+        product_url: str,
+    ) -> tuple[float | None, int | None]:
+        """Call BigCommerce's product-attributes endpoint for one variant."""
+        if self._client is None:
+            raise RuntimeError("Scraper used outside of `with` block")
 
-                results.append(
-                    fetch_data(
-                        product_url=product_url,
-                        source_url=URL,
-                        category=category,
-                        session=session,
-                    )
-                )
-        page_number += 1
+        origin = f"{urlparse(product_url).scheme}://{urlparse(product_url).netloc}"
+        endpoint = f"{origin}/remote/v1/product-attributes/{product_id}"
+        body = {
+            "action": "add",
+            "product_id": product_id,
+            f"attribute[{attribute_id}]": value_id,
+        }
+        try:
+            response = self._client.post(
+                endpoint,
+                data=body,
+                headers={
+                    "X-Requested-With": "XMLHttpRequest",
+                    "Referer": product_url,
+                },
+            )
+            response.raise_for_status()
+        except Exception as e:  # noqa: BLE001
+            self.log.warning(
+                "variant_attrs_fetch_failed",
+                product_id=product_id,
+                value_id=value_id,
+                error=str(e),
+            )
+            return None, None
 
-    print(f"Found {len(results)} products for {category}")
+        try:
+            payload = response.json()
+        except json.JSONDecodeError:
+            self.log.warning(
+                "variant_attrs_bad_json", product_id=product_id, value_id=value_id
+            )
+            return None, None
 
-    return results
+        data = payload.get("data") if isinstance(payload, dict) else None
+        if not isinstance(data, dict):
+            return None, None
+
+        price = None
+        price_block = data.get("price")
+        if isinstance(price_block, dict):
+            with_tax = price_block.get("with_tax")
+            if isinstance(with_tax, dict):
+                raw = with_tax.get("value")
+                if isinstance(raw, (int, float)):
+                    price = float(raw)
+                elif isinstance(raw, str):
+                    price = _price_from_text(raw)
+
+        stock: int | None = None
+        raw_stock = data.get("stock")
+        if isinstance(raw_stock, (int, float)):
+            stock = int(raw_stock)
+        else:
+            instock = data.get("instock")
+            if instock is True:
+                stock = 100  # BC default — quickcrop hides exact counts
+            elif instock is False:
+                stock = 0
+
+        return price, stock
 
 
-def get_product_data(config_file_name: str = "quickcrop") -> list[dict] | None:
-    config = importlib.import_module("config." + config_file_name)
-    results = []
-    driver = selenium_setup()
-    for URL, category in config.data_sources:
-        results.extend(parse_url(URL=URL, category=category, driver=driver))
-    driver.quit()
-    return results
+# ---------------------------------------------------------------------------
+# Module-level helpers
+# ---------------------------------------------------------------------------
+
+
+def _as_str(v) -> str | None:
+    """BeautifulSoup attribute getters return list|str|None — normalise."""
+    if v is None:
+        return None
+    if isinstance(v, str):
+        return v
+    if isinstance(v, list) and v:
+        first = v[0]
+        return first if isinstance(first, str) else None
+    return None
+
+
+def _price_from_text(text: str) -> float | None:
+    cleaned = re.sub(r"[^\d.,]", "", text).replace(",", ".")
+    parts = cleaned.rsplit(".", 1)
+    if len(parts) == 2 and len(parts[1]) <= 2:
+        cleaned = parts[0].replace(".", "") + "." + parts[1]
+    try:
+        return float(cleaned) if cleaned else None
+    except ValueError:
+        return None
+
+
+def _extract_quantity(text: str) -> int:
+    """Detect multibuy phrases like '3 x Trees', '5 Pack', '6 Plant'."""
+    for pat in _MULTIBUY_PATTERNS:
+        m = pat.search(text)
+        if m:
+            try:
+                return int(m.group(1))
+            except (ValueError, IndexError):
+                pass
+    return 1
+
+
+# ---------------------------------------------------------------------------
+# Backward-compat shim — load_bronze_data.py calls get_product_data()
+# ---------------------------------------------------------------------------
+
+
+def get_product_data(config_file_name: str = "quickcrop") -> list[dict]:
+    """Backward-compat shim — runs the new scraper and returns the legacy list."""
+    with QuickcropScraper(config_module=f"config.{config_file_name}") as scraper:
+        return scraper.run()

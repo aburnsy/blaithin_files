@@ -269,6 +269,26 @@ EU→IE plant shipments are not affected by Brexit; phytosanitary requirements a
 
 ---
 
+## Additional candidates flagged 2026-05-12 (community-roundup pass)
+
+A second pass against Reddit / Boards.ie / project-segfau roundups surfaced
+four nurseries not yet in the tables above. Stack/anti-bot/shipping still
+to be verified before promoting to a scrape priority.
+
+| Name | URL | Specialty | Ships IE | Notes |
+|---|---|---|---|---|
+| Irish Seed Savers | https://irishseedsavers.ie/ | Organic heirloom seed + fruit trees (Co. Clare, near Scarriff) | Yes | Recurring community recommendation for heirloom veg/grain seed and a large fruit-tree range. Stack TBC. |
+| Fermoy Woodland | https://fermoywoodland.ie/ | Bare-root hedging + woodland trees (Cork) | Yes | Frequently paired with Hedging.ie in "best value hedging" threads. Stack TBC. |
+| Kearneys Nursery | https://www.irelandtrees.com/ | Trees, shrubs, hedging — family-run grower (Galbally, Co. Tipperary; ~75 years) | Yes (nationwide delivery + collect) | Online ordering available. Active DoneDeal seller too. Stack TBC — promote to scrape candidate once verified. |
+| Guineys.ie | https://www.guineys.ie/ | Discount home/garden basics: gloves €2.49, shovels €3.99, etc. | Yes | Tools-only retailer; relevant only if we widen scope to non-plant garden sundries. |
+
+Tools-only retailers raised in the same roundup but **out of scope** for
+the plant-price comparison: Toolforce.ie, Carey Tools, Lenehans (already
+in main table for its seed range — tools side noted but not separately
+scraped). Lidl/Aldi already in the excluded list as no-ongoing-catalogue.
+
+---
+
 ## Open questions for the user
 
 1. **UK seed-only sites.** Worth including any UK *seed* retailers if/when we confirm they actually ship dormant seed to IE? Suttons, Mr F, Chiltern, Kings — all currently report "UK only" on policy pages, but enforcement varies. Is it worth a follow-up email-test to each, or just rely on the Irish resellers (Beattys, Mid Ulster, Mr Middleton, Johnstown)?
