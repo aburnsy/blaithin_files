@@ -80,7 +80,10 @@ def add_size_columns(df: pl.DataFrame) -> pl.DataFrame:
     Expects columns ``size`` (String, nullable) and ``is_plant`` (Boolean).
     """
 
-    pairs = [parse_size(s, is_plant=p) for s, p in zip(df["size"].to_list(), df["is_plant"].to_list())]
+    pairs = [
+        parse_size(s, is_plant=p)
+        for s, p in zip(df["size"].to_list(), df["is_plant"].to_list(), strict=True)
+    ]
     kinds = [k for k, _ in pairs]
     litres = [v for _, v in pairs]
     return df.with_columns([
