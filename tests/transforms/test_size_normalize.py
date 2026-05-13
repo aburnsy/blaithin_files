@@ -8,11 +8,9 @@ import polars as pl
 import pytest
 
 from src.transforms.size_normalize import (
-    SizeKind,
     add_size_columns,
     parse_size,
 )
-
 
 # --- parse_size ----------------------------------------------------------------
 
