@@ -13,9 +13,14 @@ import re
 from bs4 import BeautifulSoup
 
 from src.scrapers.base import BaseScraper
+from src.scrapers.concurrent import fetch_all_concurrent
 
 _BASE = "https://www.gardens4you.ie"
 _SITEMAP = f"{_BASE}/sitemaps/ie/sitemap.xml"
+# G4Y returned mass 403s at concurrency=10. The serial bot-UA path worked,
+# so we keep that UA (default in concurrent.py) and dial concurrency right
+# down — still ~3× faster than serial and well within the site's tolerance.
+_MAX_CONCURRENT = 3
 
 _size_pattern_cm = re.compile(r"\d+\s*cm", re.IGNORECASE)
 _size_pattern_litre = re.compile(r"\d+\s*ltr", re.IGNORECASE)
@@ -25,7 +30,7 @@ _stock_pattern = re.compile(r"\d+")
 
 class Gardens4YouScraper(BaseScraper):
     source = "gardens4you"
-    rate_limit_seconds = 0.5
+    rate_limit_seconds = 0.0  # serial path unused — we fetch concurrently
 
     def discover_categories(self) -> list[tuple[str, str]]:
         """Single seed: the sitemap. ``parse_listing`` then pulls every
@@ -45,6 +50,56 @@ class Gardens4YouScraper(BaseScraper):
                 seen.add(url)
                 out.append(url)
         return out
+
+    def run(self) -> list[dict]:
+        """Concurrent override: sitemap fan-out is ~7000 product GETs, way
+        too slow serially. See [[use-concurrent-fetches]] memory."""
+        from src.scrapers.http import RetryExhausted  # noqa: PLC0415
+
+        sitemap_url = _SITEMAP
+        try:
+            sitemap_xml = self.fetch(sitemap_url)
+        except RetryExhausted as e:
+            self.log.error("listing_fetch_failed", url=sitemap_url, error=str(e))
+            self.report.error_count += 1
+            return []
+
+        product_urls = self.parse_listing(sitemap_xml)
+        self.report.products_in = len(product_urls)
+        self.log.info("sitemap_loaded", products=len(product_urls))
+
+        pages = fetch_all_concurrent(
+            product_urls, max_concurrent=_MAX_CONCURRENT, log=self.log
+        )
+
+        results: list[dict] = []
+        for url, html in pages.items():
+            try:
+                record = self.parse_product(html, url, sitemap_url, "")
+            except Exception as e:  # noqa: BLE001
+                self.log.warning("parse_product_failed", url=url, error=str(e))
+                self._drop("parse_error")
+                continue
+            if record is None:
+                self._drop("parse_returned_none")
+                continue
+            results.append(record)
+            self.report.products_parsed += 1
+
+        # URLs that didn't fetch successfully
+        missing = len(product_urls) - len(pages)
+        if missing:
+            self.report.dropped["fetch_failed"] = missing
+
+        self.log.info(
+            "scrape_complete",
+            source=self.source,
+            in_=self.report.products_in,
+            parsed=self.report.products_parsed,
+            dropped=self.report.dropped,
+            errors=self.report.error_count,
+        )
+        return results
 
     def parse_product(
         self, html: str, product_url: str, source_url: str, category: str

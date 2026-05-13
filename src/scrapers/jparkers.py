@@ -19,28 +19,22 @@ from bs4 import BeautifulSoup
 
 from src.scrapers.base import BaseScraper
 from src.scrapers.bigcommerce_sitemap import bc_category_urls
+from src.scrapers.concurrent import fetch_all_concurrent
 from src.scrapers.http import RetryExhausted
 
 _BASE = "https://www.jparkers.com"
+_MAX_CONCURRENT = 10
+_MAX_PAGES_PER_CATEGORY = 20
 
 
 class JParkersScraper(BaseScraper):
     source = "jparkers"
-    rate_limit_seconds = 0.6
+    rate_limit_seconds = 0.0  # serial fetch unused; concurrent path below
 
     def discover_categories(self) -> list[tuple[str, str]]:
-        leaves: list[tuple[str, str]] = []
-        for base_url in bc_category_urls(_BASE, log=self.log):
-            category_name = _slug_to_label(base_url)
-            page = 1
-            while True:
-                url = base_url if page == 1 else f"{base_url}?page={page}"
-                html = self._safe_fetch(url)
-                if not html or not self._listing_has_grid(html):
-                    break
-                leaves.append((url, category_name))
-                page += 1
-        return leaves
+        """Hook kept for API compatibility — ``run()`` does its own
+        concurrent discovery and ignores this output."""
+        return []
 
     def _safe_fetch(self, url: str) -> str:
         try:
@@ -48,6 +42,88 @@ class JParkersScraper(BaseScraper):
         except RetryExhausted as e:
             self.log.warning("listing_fetch_failed", url=url, error=str(e))
             return ""
+
+    def run(self) -> list[dict]:
+        """Concurrent override — same shape as QuickcropScraper.run().
+
+        Walks BC category sitemap, fans out all category-pages, then
+        concurrently fetches every product page. See
+        [[use-concurrent-fetches]] memory.
+        """
+        category_bases = bc_category_urls(_BASE, log=self.log)
+
+        candidate_listing_urls: list[str] = []
+        listing_meta: dict[str, tuple[str, str]] = {}
+        for base_url in category_bases:
+            category_name = _slug_to_label(base_url)
+            for page in range(1, _MAX_PAGES_PER_CATEGORY + 1):
+                url = base_url if page == 1 else f"{base_url}?page={page}"
+                candidate_listing_urls.append(url)
+                listing_meta[url] = (base_url, category_name)
+        self.log.info(
+            "listing_fan_out",
+            categories=len(category_bases),
+            urls=len(candidate_listing_urls),
+        )
+        listing_pages = fetch_all_concurrent(
+            candidate_listing_urls,
+            max_concurrent=_MAX_CONCURRENT,
+            log=self.log,
+        )
+
+        product_url_to_listing: dict[str, tuple[str, str]] = {}
+        listings_with_products = 0
+        for listing_url, html in listing_pages.items():
+            if not self._listing_has_grid(html):
+                continue
+            listings_with_products += 1
+            _, category_name = listing_meta[listing_url]
+            for product_url in self.parse_listing(html):
+                product_url_to_listing.setdefault(
+                    product_url, (listing_url, category_name)
+                )
+        self.log.info(
+            "listings_resolved",
+            listings_with_products=listings_with_products,
+            unique_products=len(product_url_to_listing),
+        )
+
+        product_urls = list(product_url_to_listing)
+        self.report.products_in = len(product_urls)
+        product_pages = fetch_all_concurrent(
+            product_urls,
+            max_concurrent=_MAX_CONCURRENT,
+            log=self.log,
+        )
+
+        results: list[dict] = []
+        for product_url, html in product_pages.items():
+            source_url, category = product_url_to_listing[product_url]
+            try:
+                record = self.parse_product(html, product_url, source_url, category)
+            except Exception as e:  # noqa: BLE001
+                self.log.warning("parse_product_failed", url=product_url, error=str(e))
+                self._drop("parse_error")
+                continue
+            if record is None:
+                self._drop("parse_returned_none")
+                continue
+            results.append(record)
+            self.report.products_parsed += 1
+
+        fetch_misses = len(product_urls) - len(product_pages)
+        if fetch_misses:
+            self.report.dropped["fetch_failed"] = fetch_misses
+
+        self.log.info(
+            "scrape_complete",
+            source=self.source,
+            in_=self.report.products_in,
+            parsed=self.report.products_parsed,
+            dropped=self.report.dropped,
+            errors=self.report.error_count,
+        )
+        return results
 
     @staticmethod
     def _listing_has_grid(html: str) -> bool:
