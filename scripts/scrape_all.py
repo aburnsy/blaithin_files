@@ -4,9 +4,10 @@ Mirrors the GitHub Actions nightly matrix (one site per parallel job),
 but on the local machine with a configurable worker count.
 
 Each site runs as a separate subprocess invoking
-``python load_bronze_data.py --site <name>``.  Per-site stdout+stderr go
-to ``logs/scrape-<timestamp>/<site>.log``; the parent process prints a
-one-line start/finish status for each site and a final summary table.
+``python load_bronze_data.py --site <name>``.  Each subprocess writes its
+own structlog file to ``logs/<site>.log`` (overwritten each run); the
+parent process prints a one-line start/finish status for each site and a
+final summary table.
 
 Usage (PowerShell or bash)::
 
@@ -31,7 +32,6 @@ import subprocess
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -49,10 +49,15 @@ ALL_SITES: tuple[str, ...] = scraped_nursery_slugs()
 def run_site(
     site: str, log_dir: Path, force: bool
 ) -> tuple[str, int, float, Path]:
-    """Run one scraper subprocess.  Returns (site, returncode, elapsed_s, log_path)."""
+    """Run one scraper subprocess. Returns (site, returncode, elapsed_s, log_path).
+
+    The subprocess writes its own structlog file to ``log_dir/<site>.log``
+    via ``src.common.logging.configure(source=site)``. We just suppress its
+    stdout/stderr (already captured to the log) and watch its exit code.
+    """
     log_path = log_dir / f"{site}.log"
     env = os.environ.copy()
-    env["PYTHONUNBUFFERED"] = "1"  # flush scraper print() lines to disk promptly
+    env["PYTHONUNBUFFERED"] = "1"
     if force:
         env["FORCE_SCRAPE"] = "1"
 
@@ -61,34 +66,14 @@ def run_site(
     rel_log = log_path.relative_to(REPO_ROOT)
     print(f"[start] {site:<12} -> {rel_log}", flush=True)
 
-    with log_path.open("w", encoding="utf-8") as logf:
-        logf.write(f"# command: {' '.join(cmd)}\n")
-        logf.write(f"# cwd:     {REPO_ROOT}\n")
-        logf.write(f"# started: {datetime.now().isoformat(timespec='seconds')}\n")
-        logf.write(f"# FORCE_SCRAPE={'1' if force else ''}\n")
-        max_age = os.environ.get("SCRAPE_MAX_AGE_DAYS", "")
-        if max_age:
-            logf.write(f"# SCRAPE_MAX_AGE_DAYS={max_age}\n")
-        logf.write("\n")
-        logf.flush()
-
-        # Stream stdout/stderr line-by-line so we can prefix each line with a
-        # wall-clock timestamp — lets `tail -f <log>` show when the last update
-        # happened and makes post-mortem timing analysis trivial.
-        proc = subprocess.Popen(
-            cmd,
-            cwd=REPO_ROOT,
-            env=env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            bufsize=1,
-        )
-        assert proc.stdout is not None
-        for line in proc.stdout:
-            logf.write(f"[{datetime.now().strftime('%H:%M:%S')}] {line}")
-            logf.flush()
-        returncode = proc.wait()
+    proc = subprocess.Popen(
+        cmd,
+        cwd=REPO_ROOT,
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    returncode = proc.wait()
 
     elapsed = time.monotonic() - started
     tag = "ok" if returncode == 0 else f"FAIL rc={returncode}"
@@ -121,7 +106,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--logs-dir",
         type=Path,
-        help="Where to put per-site logs (default: logs/scrape-<timestamp>/).",
+        help="Where to put per-site logs (default: logs/).",
     )
     parser.add_argument(
         "--list-sites",
@@ -146,8 +131,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.concurrency < 1:
         parser.error("--concurrency must be >= 1")
 
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    log_dir = args.logs_dir or REPO_ROOT / "logs" / f"scrape-{timestamp}"
+    log_dir = args.logs_dir or REPO_ROOT / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"Scraping {len(sites)} site(s) with concurrency {args.concurrency}")

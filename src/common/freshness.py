@@ -6,6 +6,9 @@ from pathlib import Path
 import pyarrow.parquet as pq
 
 
+PARQUET_NAME = "data.parquet"
+
+
 def should_scrape(
     source: str,
     *,
@@ -21,34 +24,24 @@ def should_scrape(
     if today is None:
         today = datetime.date.today()
 
-    source_dir = data_root / source
-    if not source_dir.is_dir():
-        return True, f"RUN {source}: no data directory at {source_dir}"
-
-    parquets = sorted(source_dir.glob("*.parquet"))
-    if not parquets:
-        return True, f"RUN {source}: no parquet files in {source_dir}"
-
-    newest = parquets[-1]
+    parquet = data_root / source / PARQUET_NAME
+    if not parquet.is_file():
+        return True, f"RUN {source}: no parquet at {parquet}"
 
     try:
-        file_date = datetime.date.fromisoformat(newest.stem)
-    except ValueError:
-        return True, f"RUN {source}: newest file {newest.name} has unparseable date"
-
-    try:
-        num_rows = pq.ParquetFile(newest).metadata.num_rows
+        num_rows = pq.ParquetFile(parquet).metadata.num_rows
     except Exception as exc:
-        return True, f"RUN {source}: could not read {newest.name} ({exc})"
+        return True, f"RUN {source}: could not read {parquet.name} ({exc})"
 
     if num_rows < 1:
-        return True, f"RUN {source}: newest parquet {newest.name} has 0 rows"
+        return True, f"RUN {source}: parquet {parquet.name} has 0 rows"
 
-    age_days = (today - file_date).days
+    mtime = datetime.date.fromtimestamp(parquet.stat().st_mtime)
+    age_days = (today - mtime).days
     if age_days < max_age_days:
-        return False, f"SKIP {source}: fresh parquet {file_date.isoformat()} (age {age_days}d)"
+        return False, f"SKIP {source}: fresh parquet (mtime {mtime.isoformat()}, age {age_days}d)"
 
     return (
         True,
-        f"RUN {source}: stale parquet {file_date.isoformat()} (age {age_days}d >= {max_age_days}d)",
+        f"RUN {source}: stale parquet (mtime {mtime.isoformat()}, age {age_days}d >= {max_age_days}d)",
     )

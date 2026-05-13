@@ -83,21 +83,35 @@ bulbi:
   delivery_type: tiered
   delivery_fees: []
   min_order_eur: 25
-  runs_on: self-hosted
+  runs_on: github-actions
   ships_live_plants_to_ireland: true
-  notes: "Prices include VAT per their T&Cs Art. 5: 'Alle prijzen zijn vermeld in euro's, inclusief BTW en exclusief verzendkosten'. Bulbs and perennials."
+  notes: "Prices include VAT per their T&Cs Art. 5: 'Alle prijzen zijn vermeld in euro's, inclusief BTW en exclusief verzendkosten'. Bulbs and perennials. Magento 2 GraphQL."
 
 greengardenflowerbulbs:
   display_name: "GreenGardenFlowerBulbs.nl"
   base_url: https://www.greengardenflowerbulbs.nl
   currency: EUR
   vat_included: false
-  delivery_type: tiered
+  delivery_type: per_box
   delivery_fees: []
-  min_order_eur: 50
-  runs_on: self-hosted
+  delivery_per_box_eur: 21.50
+  delivery_per_pallet_eur: 425
+  min_order_eur: 500
+  runs_on: github-actions
   ships_live_plants_to_ireland: true
-  notes: "B2B-style bulb wholesaler — prices shown ex-VAT; IE customers pay 23% on top. Min order applies."
+  notes: "B2B bulb wholesaler — prices shown ex-VAT; IE customers pay 23% on top. €500 min order; ships €21.50/box or €425/pallet to IE. Magento 2 GraphQL."
+
+johnstown:
+  display_name: "Johnstown Garden Centre"
+  base_url: https://johnstowngardencentre.ie
+  currency: EUR
+  vat_included: true
+  delivery_type: flat
+  delivery_fees: [{ max_value_eur: null, fee_eur: 4.75 }]
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: "Kildare full-range — €4.75 flat anywhere IE & NI. Magento 2 GraphQL. Stocks Suttons & T&M seeds otherwise blocked direct-to-ROI."
 
 hedgingie:
   display_name: "Hedging.ie"
@@ -350,3 +364,66 @@ famous_roses:
   runs_on: github-actions
   ships_live_plants_to_ireland: true
   notes: "RO/EU rose specialist Shopify shop; bare-root + potted; courier rates."
+
+# Below: documented but not yet scraped — scraper module not built.
+# Switch runs_on to github-actions when src/scrapers/<slug>.py lands.
+
+mr_middleton:
+  display_name: "Mr Middleton"
+  base_url: https://www.mrmiddleton.com
+  currency: EUR
+  vat_included: true
+  delivery_type: tiered
+  delivery_fees: [{ max_value_eur: 85, fee_eur: 6.50 }, { max_value_eur: null, fee_eur: 0 }]
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: "BigCommerce Stencil (Halo theme). Bulbs (Langeveld), seeds, garden tools, fertiliser. €6.50 flat; free over €85. Subclasses QuickcropScraper."
+
+jparkers:
+  display_name: "J Parker's (IE)"
+  base_url: https://www.jparkers.com
+  currency: EUR
+  vat_included: true
+  delivery_type: tiered
+  delivery_fees: [{ max_value_eur: 60, fee_eur: 6.99 }, { max_value_eur: null, fee_eur: 0 }]
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: "BigCommerce Stencil (custom theme). Bulb specialist with extensive range. €6.99 flat; free over €60; €2.99 for seeds-only orders. Prices on PDP come from section.productView-data data-price (no span.price--withTax)."
+
+ardcarne:
+  display_name: "Ardcarne Garden Centre"
+  base_url: https://www.ardcarne.ie
+  currency: EUR
+  vat_included: true
+  delivery_type: tiered
+  delivery_fees: [{ max_value_eur: null, fee_eur: 13.95 }]
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: "Roscommon garden centre, Cloudflare-fronted custom platform. €13.95 ≤20 kg; €3.80 seed-only. No free threshold. Sitemap-driven scraper — plain httpx GET works with a Chrome UA, no JS rendering."
+
+promesse:
+  display_name: "Promesse de Fleurs (IE)"
+  base_url: https://www.promessedefleurs.ie
+  currency: EUR
+  vat_included: true
+  delivery_type: tiered
+  delivery_fees: []
+  min_order_eur: 0
+  runs_on: github-actions
+  ships_live_plants_to_ireland: true
+  notes: "FR Magento 2 storefront, ~26k SKUs. /graphql 500s on every products() shape; we paginate /all-plants.html instead and parse cards directly (no per-product fetch — listing has name/price/url/img). Variants surface as 'from' price."
+
+peter_nyssen:
+  display_name: "Peter Nyssen"
+  base_url: https://www.peternyssen.com
+  currency: GBP
+  vat_included: true
+  delivery_type: flat
+  delivery_fees: [{ max_value_eur: null, fee_eur: 17 }]
+  min_order_eur: 0
+  runs_on: self-hosted
+  ships_live_plants_to_ireland: true
+  notes: "Manchester-based bulb specialist shipping from NL warehouse since Brexit (EU & NI delivery normal); ~£17/€17 to IE. Cloudflare-fronted — needs a browser-driven scraper. DEFERRED: confirm with user before investing in a Playwright/Selenium build."

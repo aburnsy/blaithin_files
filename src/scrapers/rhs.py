@@ -1,304 +1,466 @@
-import traceback
-from datetime import datetime
+"""RHS plant detail scraper — API-driven, resumable, single parquet output.
 
+The RHS Angular site fronts a JSON detail endpoint:
+
+    GET https://lwapp-uks-prod-psearch-01.azurewebsites.net/api/v1/plants/details/{id}
+
+We fetch every ID from ``data/rhs_urls.parquet`` through this endpoint,
+stage results in a sqlite database at ``data/rhs/_staging.sqlite``, and
+finalise the run by dumping a single ``data/rhs/data.parquet``.
+
+Resuming is automatic: on startup we read ``SELECT id FROM plants`` and skip
+those IDs. 404s land in a ``failed_ids`` table and stay there until a
+``retry_failed=True`` run revisits them.
+
+See ``docs/research/rhs-overhaul.md`` for the design rationale.
+"""
+
+from __future__ import annotations
+
+import concurrent.futures as cf
+import json
+import re
+import shutil
+import sqlite3
+import threading
+from html import unescape
+from pathlib import Path
+
+import httpx
 import polars as pl
-from bs4 import BeautifulSoup
-from requests_html import HTMLSession
-from selenium import webdriver
-from selenium.webdriver.support.wait import WebDriverWait
 
-try:
-    from .common import ScrollToBottom
-except ImportError:
-    from common import ScrollToBottom
-import os
+from src.common.logging import get_logger
+from src.scrapers.rhs_enums import (
+    ASPECT,
+    EXPOSURE,
+    FOLIAGE,
+    HABIT,
+    HARDINESS,
+    MOISTURE,
+    PH,
+    PLANT_TYPE,
+    SOIL_TYPE,
+    SUNLIGHT,
+    decode_list,
+    decode_scalar,
+)
+
+log = get_logger("scraper.rhs")
+
+DETAIL_URL = "https://lwapp-uks-prod-psearch-01.azurewebsites.net/api/v1/plants/details/{id}"
+
+DATA_DIR = Path("data") / "rhs"
+STAGING_DB = DATA_DIR / "_staging.sqlite"
+FINAL_PARQUET = DATA_DIR / "data.parquet"
+FAILED_IDS_TXT = DATA_DIR / "failed_ids.txt"
+
+_USER_AGENT = (
+    "Mozilla/5.0 (compatible; blaithin-bot/1.0; +https://github.com/aburnsy/blaithin_files)"
+)
+
+_TAG_RE = re.compile(r"<[^>]+>")
+_CULTIVAR_RE = re.compile(r"\s*'[^']+'\s*(\([^)]+\))?$")
 
 
-def _log(msg: str) -> None:
-    """Print one line prefixed with HH:MM:SS, flushed immediately."""
-    print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}", flush=True)
+class Fetch404(Exception):
+    """The plant ID is not known to the detail API."""
 
 
-def extract_detailed_plant_data(plant: dict, plant_content) -> dict:
-    id_ = plant["id"]
-    # Can't rely on botanical name from api as on occasion it is wrong e.g. https://www.rhs.org.uk/plants/5638/rhododendron-ginny-gee/details
-    botanical_name = plant_content.find("h1", class_="h1--alt").find("span").text
-    botanical_name = botanical_name.replace("Ã", "x").replace("ã", "x").strip()
+class FetchFailed(Exception):
+    """All retries exhausted on a non-404 error."""
 
-    plant_url = plant["plant_url"]
 
-    try:
-        common_name = plant_content.find("p", class_="summary summary--sub").text
-        if common_name == "":
-            common_name = None
-    except AttributeError:
-        common_name = None
+def _strip_html(s: str | None) -> str | None:
+    if not s:
+        return None
+    return _TAG_RE.sub("", unescape(s)).strip() or None
 
-    try:
-        all_labels = plant_content.find_all("span", class_="label ng-star-inserted")
-        plant_type = [pt.text.strip() for pt in all_labels if pt.text.strip() != "Synonym"]
 
-        synonyms: list[str] = []
-        for label in all_labels:
-            if label.text.strip() == "Synonym":
-                parent = label.parent
-                synonym_text = parent.get_text(strip=True).replace("Synonym", "", 1).strip()
-                if synonym_text:
-                    synonyms.append(synonym_text)
-    except AttributeError:
-        print(f"Cannot find plant type for plant {plant_url}")
-        plant_type = []
-        synonyms = []
+def _split_botanical(name: str | None) -> tuple[str, str]:
+    """Return (genus, species) from a cleaned botanical name."""
+    if not name:
+        return "", ""
+    cleaned = _CULTIVAR_RE.sub("", name).strip()
+    # Drop the hybrid sign so the species token is the actual epithet
+    cleaned = cleaned.replace("× ", "").replace(" ×", "")
+    parts = cleaned.split(" ")
+    genus = parts[0] if parts else ""
+    species = parts[1] if len(parts) > 1 else ""
+    return genus, species
 
-    try:
-        description = plant_content.find("p", class_="ng-star-inserted").text.strip()
-    except AttributeError:
-        print(f"Cannot find description for plant {plant_url}")
-        description = None
 
-    is_rhs_award_winner = plant_content.find("img", attrs={"alt": "RHS AGM"}) is not None
-    is_pollinator_plant = (
-        plant_content.find("img", attrs={"alt": "RHS Plants for pollinators"}) is not None
+def _build_plant_url(id_: int, botanical: str) -> str:
+    """Mirror the slug the RHS site uses: dashes, no specials, URL-encoded."""
+    import urllib.parse
+
+    slug = botanical
+    slug = (
+        slug.replace(" ", "-")
+        .replace("/", "-")
+        .replace("-&-", "-")
+        .replace("-+-", "-")
+        .replace("+-", "-")
     )
+    slug = slug.replace(".", "").replace("&", "").replace("'", "")
+    slug = urllib.parse.quote(slug)
+    return f"https://www.rhs.org.uk/plants/{id_}/{slug}/details"
 
-    # Size, Growing Conditions, Colour&Scent, Position
-    for plant_attributes_panel in plant_content.find_all(
-        "div", class_="plant-attributes__panel"
-    ):
-        panel_heading = plant_attributes_panel.find(
-            class_="plant-attributes__heading"
-        ).text.lower()
-        if panel_heading == "size":
-            for attribute in plant_attributes_panel.find_all(class_="flag__body"):
-                if attribute.find(lambda tag: "Ultimate height" in tag.text):
-                    height = (
-                        attribute.contents[-1]
-                        .strip()
-                        .replace("–", "-")
-                        .replace("â", "-")
-                        .replace("-\x80\x93", "-")
-                    )
-                elif attribute.find(lambda tag: "Ultimate spread" in tag.text):
-                    spread = (
-                        attribute.contents[-1]
-                        .strip()
-                        .replace("–", "-")
-                        .replace("â", "-")
-                        .replace("-\x80\x93", "-")
-                    )
-                elif attribute.find(lambda tag: "Time to ultimate height" in tag.text):
-                    time_to_ultimate_spread = (
-                        attribute.contents[-1]
-                        .strip()
-                        .replace("–", "-")
-                        .replace("â", "-")
-                        .replace("-\x80\x93", "-")
-                    )
-        elif panel_heading == "growing conditions":
-            soils = [
-                soil_element.text
-                for soil_element in plant_attributes_panel.find_all(
-                    "div", class_="flag__body"
-                )
-            ]
-            for attribute in plant_attributes_panel.find_all(class_="l-module"):
-                if attribute.find(lambda tag: "Moisture" in tag.text):
-                    moisture = (
-                        attribute.find("span")
-                        .text.strip()
-                        .replace("–", "-")
-                        .replace("â", "-")
-                        .replace("-\x80\x93", "-")
-                    )
-                elif attribute.find(lambda tag: "pH" in tag.text):
-                    ph = [
-                        attr.text.replace(",", "").strip()
-                        for attr in attribute.find_all("span")
-                    ]
-        elif "colour" in panel_heading:
-            if len(table := plant_attributes_panel.find("table")) > 0:
-                data = []
-                for row in table.find_all("tr")[1:]:
-                    row_data = []
-                    for header in row.find_all("th"):
-                        row_data.append(header.text)
-                    for cell in row.find_all("td"):
-                        row_data.append(cell.text.strip().split())
-                    data.append(row_data)
-                colour_and_scent = data  # noqa: F841
-                # df = pl.DataFrame(
-                #     data, schema=["Season", "Stem", "Flower", "Foliage", "Fruit"]
-                # )
-                # print(df)
-        elif panel_heading == "position":
-            try:
-                sun_exposure = [
-                    se.text
-                    for se in plant_attributes_panel.find(
-                        "ul", class_="list-inline ng-star-inserted"
-                    ).find_all("li")
-                ]
-            # Example with no exposure: https://www.rhs.org.uk/plants/239046/delphinium-lance-bearer/details
-            except AttributeError:
-                sun_exposure = None
 
-            aspect = [
-                asp.text.replace("\x80\x93", "-").replace("â", "").replace(" or ", "")
-                for asp in plant_attributes_panel.find("p").find_all("span")
-            ]
+def parse_detail(payload: dict) -> dict:
+    """Pure function: API JSON -> column dict for the parquet row.
 
-            expos_hard = plant_attributes_panel.find(
-                "div", class_="l-row l-row--space l-row--auto-clear"
-            ).find_all("div", class_="l-module")
-            exposure = [
-                exp.text.replace(" or ", "") for exp in expos_hard[0].find_all("span")
-            ]
-            try:  # Example with no hardiness https://www.rhs.org.uk/plants/372810/phalaenopsis-picasso/details
-                hardiness = expos_hard[1].find_all("span")[-1].text
-            except IndexError:
-                hardiness = None
+    No I/O; all decisions live here so the test suite can exercise the full
+    parse without hitting the network.
+    """
+    id_ = int(payload["id"])
 
-    bottom_panel = plant_content.find("div", class_="panel__body").find_all(string=True)
-    bottom_panel = [entry for entry in bottom_panel if entry.strip() != ""]
-    i = 0
-    while i < len(bottom_panel):
-        value = bottom_panel[i]
-        if str(value).strip().endswith(" or") or str(value).strip().endswith(","):
-            bottom_panel[i] = bottom_panel[i] + bottom_panel[i + 1]
-            del bottom_panel[i + 1]
-            i -= 1
-        i += 1
+    botanical = payload.get("botanicalNameUnFormatted") or _strip_html(
+        payload.get("botanicalName")
+    ) or ""
+    genus, species = _split_botanical(botanical)
 
-    bottom_panel_dict = {}
-    for key, value in zip(bottom_panel[0::2], bottom_panel[1::2], strict=False):
-        bottom_panel_dict[key] = value
-    try:  # Example https://www.rhs.org.uk/plants/78738/blackstonia-perfoliata/details
-        foliage = [
-            entry.strip() for entry in bottom_panel_dict["Foliage"].split(" or ")
-        ]
-    except KeyError:
-        foliage = None
-    habit = [entry.strip() for entry in bottom_panel_dict["Habit"].split(",")]
+    synonyms_raw = payload.get("synonyms") or []
+    synonyms: list[str] = []
+    for s in synonyms_raw:
+        name = _strip_html(s.get("name") if isinstance(s, dict) else None)
+        # The API often includes the plant itself in its own synonyms list;
+        # filter that out.
+        if name and (not isinstance(s, dict) or s.get("id") != id_):
+            synonyms.append(name)
 
-    try:
-        family = bottom_panel_dict["Family"]
-        if family == "Poaceae":
-            if "Grass Like" not in plant_type:
-                plant_type.append("Grass Like")
-    except KeyError:
-        pass
+    common_name = payload.get("commonName") or None
+    common_names = list(payload.get("commonNames") or [])
+    # Keep both shapes populated; legacy fuzzy matcher reads singular,
+    # RhsRecord target schema reads plural.
+    if common_name and common_name not in common_names:
+        common_names.insert(0, common_name)
+    if not common_name and common_names:
+        common_name = common_names[0]
 
-    extract = {
-        "id": id_,
-        "source": "rhs",
-        "plant_url": plant_url,
-        "botanical_name": botanical_name,
+    return {
+        "rhs_id": id_,
+        "plant_url": _build_plant_url(id_, botanical),
+        "botanical_name": botanical,
+        "genus": genus,
+        "species": species,
+        "family": payload.get("family") or None,
         "common_name": common_name,
-        "plant_type": plant_type,
+        "common_names": common_names,
         "synonyms": synonyms,
-        "description": description,
-        "is_rhs_award_winner": is_rhs_award_winner,
-        "is_pollinator_plant": is_pollinator_plant,
-        "height": height,
-        "spread": spread if "spread" in locals() else None,
-        "time_to_ultimate_spread": time_to_ultimate_spread,
-        "soils": soils,
-        "moisture": moisture if "moisture" in locals() else None,
-        "ph": ph if "ph" in locals() else None,
-        # "colour_and_scent": colour_and_scent,
-        "sun_exposure": sun_exposure,
-        "aspect": aspect,
-        "exposure": exposure,
-        "hardiness": hardiness,
-        "foliage": foliage,
-        "habit": habit,
+        "plant_type": decode_list(payload.get("plantType"), PLANT_TYPE),
+        "description": payload.get("entityDescription") or None,
+        "is_rhs_award_winner": bool(payload.get("isAgm")),
+        "is_pollinator_plant": bool(payload.get("isPlantsForPollinators")),
+        "height": payload.get("height") or None,
+        "spread": payload.get("spread") or None,
+        "soils": decode_list(payload.get("soilType"), SOIL_TYPE),
+        "moisture": _scalar_or_first(payload.get("moisture"), MOISTURE),
+        "ph": decode_list(payload.get("ph"), PH),
+        "sun_exposure": decode_list(payload.get("sunlight"), SUNLIGHT),
+        "aspect": decode_list(payload.get("aspect"), ASPECT),
+        "exposure": decode_list(payload.get("exposure"), EXPOSURE),
+        "hardiness": decode_scalar(payload.get("hardinessLevel"), HARDINESS),
+        "foliage": decode_list(payload.get("foliage"), FOLIAGE),
+        "habit": decode_list(payload.get("habit"), HABIT),
+        "source": "rhs",
     }
-    return extract
 
 
-def get_plants_detail(plants: list[dict]) -> None:
-    session = HTMLSession()
-    driver = webdriver.Chrome()
-    if not os.path.exists("data\\rhs"):
-        os.mkdir("data\\rhs")
+def _scalar_or_first(value, table: dict[int, str]) -> str | None:
+    """RhsRecord declares ``moisture`` as ``str | None``; the API returns a list.
 
-    total = len(plants)
-    cached = 0
-    fetched = 0
-    selenium_fallbacks = 0
-    errors = 0
-    progress_every = 50
+    Decode every value but only keep the first label so the column stays scalar.
+    Returning the first matches the legacy scraper's output shape.
+    """
+    if value is None:
+        return None
+    if isinstance(value, list):
+        decoded = decode_list(value, table)
+        return decoded[0] if decoded else None
+    return decode_scalar(int(value), table)
 
-    _log(
-        f"RHS detail fetch starting — {total} plants total. "
-        f"Already-cached parquets in data/rhs/ are skipped."
+
+# ---------------------------------------------------------------------------
+# Staging DB
+# ---------------------------------------------------------------------------
+
+_SCHEMA = """
+CREATE TABLE IF NOT EXISTS plants (
+    id          INTEGER PRIMARY KEY,
+    fetched_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    raw_json    TEXT NOT NULL,
+    parsed_json TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS failed_ids (
+    id        INTEGER PRIMARY KEY,
+    reason    TEXT NOT NULL,
+    attempts  INTEGER NOT NULL DEFAULT 1,
+    last_seen TEXT NOT NULL DEFAULT (datetime('now'))
+);
+"""
+
+
+def _open_db(path: Path | None = None) -> sqlite3.Connection:
+    if path is None:
+        path = STAGING_DB
+    path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(path, isolation_level=None, check_same_thread=False)
+    conn.executescript("PRAGMA journal_mode=WAL;\nPRAGMA synchronous=NORMAL;")
+    conn.executescript(_SCHEMA)
+    return conn
+
+
+def _seen_ids(conn: sqlite3.Connection) -> set[int]:
+    return {r[0] for r in conn.execute("SELECT id FROM plants")}
+
+
+def _failed_id_set(conn: sqlite3.Connection) -> set[int]:
+    return {r[0] for r in conn.execute("SELECT id FROM failed_ids")}
+
+
+def _record_success(
+    conn: sqlite3.Connection, lock: threading.Lock, id_: int, raw: dict, parsed: dict
+) -> None:
+    with lock:
+        conn.execute(
+            "INSERT OR REPLACE INTO plants(id, raw_json, parsed_json) VALUES (?, ?, ?)",
+            (id_, json.dumps(raw, ensure_ascii=False), json.dumps(parsed, ensure_ascii=False)),
+        )
+        # If this ID was previously in failed_ids, clear it
+        conn.execute("DELETE FROM failed_ids WHERE id = ?", (id_,))
+
+
+def _record_failure(
+    conn: sqlite3.Connection, lock: threading.Lock, id_: int, reason: str
+) -> None:
+    with lock:
+        conn.execute(
+            """INSERT INTO failed_ids(id, reason, attempts)
+               VALUES (?, ?, 1)
+               ON CONFLICT(id) DO UPDATE
+                 SET reason=excluded.reason,
+                     attempts=failed_ids.attempts + 1,
+                     last_seen=datetime('now')""",
+            (id_, reason),
+        )
+
+
+# ---------------------------------------------------------------------------
+# Fetching
+# ---------------------------------------------------------------------------
+
+
+def _fetch_one(client: httpx.Client, id_: int, max_attempts: int = 3) -> dict:
+    """Fetch a single plant's JSON. Raises Fetch404 or FetchFailed."""
+    url = DETAIL_URL.format(id=id_)
+    last_exc: Exception | None = None
+    for _ in range(max_attempts):
+        try:
+            r = client.get(url)
+        except (httpx.TimeoutException, httpx.NetworkError) as e:
+            last_exc = e
+            continue
+        if r.status_code == 404:
+            raise Fetch404(f"id={id_} -> 404")
+        if r.status_code >= 500 or r.status_code == 429:
+            last_exc = httpx.HTTPStatusError(
+                f"id={id_} -> {r.status_code}", request=r.request, response=r
+            )
+            continue
+        if r.status_code != 200:
+            raise FetchFailed(f"id={id_} -> {r.status_code}")
+        try:
+            return r.json()
+        except json.JSONDecodeError as e:
+            raise FetchFailed(f"id={id_} -> invalid JSON: {e}") from e
+    raise FetchFailed(f"id={id_} -> {max_attempts} attempts: {last_exc}")
+
+
+def _build_client() -> httpx.Client:
+    return httpx.Client(
+        headers={"User-Agent": _USER_AGENT, "Accept": "application/json"},
+        timeout=30.0,
+        follow_redirects=True,
     )
 
-    for i, plant in enumerate(plants, start=1):
-        plant_url = plant["plant_url"]
-        file_name = f"data\\rhs\\{plant['id']}.parquet"
-        if os.path.isfile(file_name):
-            cached += 1
-            if i % progress_every == 0:
-                _log(
-                    f"  [{i}/{total}] cached={cached} fetched={fetched} "
-                    f"selenium={selenium_fallbacks} errors={errors}"
-                )
-            continue
 
-        _log(f"  [{i}/{total}] fetching {plant_url}")
+# ---------------------------------------------------------------------------
+# Orchestration
+# ---------------------------------------------------------------------------
 
-        if (plant_page := session.get(plant_url)).status_code != 200:
-            _log(f"    -> HTTP {plant_page.status_code}; skipping.")
-            errors += 1
+
+def _remove_legacy_per_plant_files(data_dir: Path | None = None) -> int:
+    """Delete the one-file-per-plant parquets the old scraper produced.
+
+    Returns the number removed. Idempotent.
+    """
+    if data_dir is None:
+        data_dir = DATA_DIR
+    count = 0
+    for p in data_dir.glob("*.parquet"):
+        if p.name == FINAL_PARQUET.name:
             continue
         try:
-            extract = extract_detailed_plant_data(
-                plant=plant,
-                plant_content=BeautifulSoup(plant_page.content, "html.parser"),
-            )
-        except Exception:
-            try:
-                _log("    -> HTML parse failed, retrying via Selenium.")
-                selenium_fallbacks += 1
-                driver.get(plant_url)
-                WebDriverWait(driver, 100).until(ScrollToBottom(driver, 2))
-                extract = extract_detailed_plant_data(
-                    plant=plant,
-                    plant_content=BeautifulSoup(driver.page_source, "html.parser"),
-                )
+            p.unlink()
+            count += 1
+        except OSError as e:
+            log.warning("legacy_unlink_failed", path=str(p), error=str(e))
+    return count
 
-            except Exception:
-                traceback.print_exc()
-                _log(f"    -> ERROR: could not fetch data for {plant_url}")
-                errors += 1
-                continue
 
-        df = pl.DataFrame([extract])
-        df.write_parquet(file_name)
-        fetched += 1
+def _write_final_parquet(conn: sqlite3.Connection, out: Path | None = None) -> int:
+    """Read parsed_json from sqlite and write the canonical parquet."""
+    if out is None:
+        out = FINAL_PARQUET
+    rows: list[dict] = []
+    for (parsed_json,) in conn.execute("SELECT parsed_json FROM plants"):
+        rows.append(json.loads(parsed_json))
+    if not rows:
+        log.warning("no_rows_for_final_parquet")
+        return 0
+    df = pl.DataFrame(rows, infer_schema_length=None)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    df.write_parquet(out)
+    return len(df)
 
-        if i % progress_every == 0:
-            _log(
-                f"  [{i}/{total}] cached={cached} fetched={fetched} "
-                f"selenium={selenium_fallbacks} errors={errors}"
-            )
 
-    _log(
-        f"RHS detail fetch complete: cached={cached} fetched={fetched} "
-        f"selenium={selenium_fallbacks} errors={errors} (total={total})"
+def _dump_failed_ids(conn: sqlite3.Connection, out: Path | None = None) -> int:
+    if out is None:
+        out = FAILED_IDS_TXT
+    rows = list(conn.execute("SELECT id, reason FROM failed_ids ORDER BY id"))
+    if not rows:
+        # Drop the file so a clean run has no stale failures hanging around
+        if out.is_file():
+            out.unlink()
+        return 0
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with out.open("w", encoding="utf-8") as f:
+        for id_, reason in rows:
+            f.write(f"{id_}\t{reason}\n")
+    return len(rows)
+
+
+def get_plants_detail(
+    plants: list[dict],
+    *,
+    max_workers: int = 12,
+    retry_failed: bool = False,
+    progress_every: int = 200,
+) -> None:
+    """Fetch plant detail for every entry in ``plants`` and write the parquet.
+
+    ``plants`` matches the shape produced by ``rhs_urls.get_plant_urls()``:
+    a list of dicts each carrying at least an ``id`` key. Other fields are
+    ignored — the API is the source of truth for botanical/common names.
+
+    Resumable: IDs already in the staging DB are skipped unless they appear in
+    ``failed_ids`` AND ``retry_failed=True``.
+    """
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+    removed = _remove_legacy_per_plant_files()
+    if removed:
+        log.info("legacy_per_plant_files_removed", count=removed)
+
+    conn = _open_db()
+    db_lock = threading.Lock()
+
+    seen = _seen_ids(conn)
+    failed = _failed_id_set(conn)
+    log.info("staging_state", seen=len(seen), failed=len(failed))
+
+    all_ids = [int(p["id"]) for p in plants]
+    to_fetch: list[int] = []
+    for id_ in all_ids:
+        if id_ in seen:
+            continue
+        if id_ in failed and not retry_failed:
+            continue
+        to_fetch.append(id_)
+
+    total = len(to_fetch)
+    log.info(
+        "rhs_fetch_start",
+        total_input=len(all_ids),
+        already_done=len(seen),
+        to_fetch=total,
+        retry_failed=retry_failed,
+        max_workers=max_workers,
     )
-    driver.quit()
+
+    if total == 0:
+        log.info("rhs_nothing_to_fetch")
+    else:
+        fetched = 0
+        errors_404 = 0
+        errors_other = 0
+
+        def _worker(id_: int) -> tuple[int, str]:
+            try:
+                payload = _fetch_one(client, id_)
+            except Fetch404 as e:
+                _record_failure(conn, db_lock, id_, "404")
+                return id_, f"404: {e}"
+            except FetchFailed as e:
+                _record_failure(conn, db_lock, id_, type(e).__name__)
+                return id_, f"FAIL: {e}"
+            try:
+                parsed = parse_detail(payload)
+            except Exception as e:  # noqa: BLE001
+                _record_failure(conn, db_lock, id_, f"parse_error: {e}")
+                return id_, f"PARSE: {e}"
+            _record_success(conn, db_lock, id_, payload, parsed)
+            return id_, "ok"
+
+        with _build_client() as client, cf.ThreadPoolExecutor(max_workers=max_workers) as pool:
+            futures = [pool.submit(_worker, id_) for id_ in to_fetch]
+            for i, fut in enumerate(cf.as_completed(futures), start=1):
+                _, status = fut.result()
+                if status == "ok":
+                    fetched += 1
+                elif status.startswith("404"):
+                    errors_404 += 1
+                else:
+                    errors_other += 1
+                if i % progress_every == 0 or i == total:
+                    log.info(
+                        "rhs_progress",
+                        done=i,
+                        total=total,
+                        fetched=fetched,
+                        errors_404=errors_404,
+                        errors_other=errors_other,
+                    )
+
+    written = _write_final_parquet(conn)
+    failed_count = _dump_failed_ids(conn)
+    log.info(
+        "rhs_fetch_complete",
+        rows_in_parquet=written,
+        failed_ids=failed_count,
+        parquet=str(FINAL_PARQUET),
+        sidecar=str(FAILED_IDS_TXT) if failed_count else None,
+    )
+    conn.close()
 
 
-# print(
-#     get_plants_detail(
-#         [
-#             {
-#                 "plant_url": "https://www.rhs.org.uk/plants/98658/forsythia-intermedia-lynwood/details",
-#                 "id": 98658,
-#                 "botanical_name": "Tillandsia albertiana",
-#             },
-#         ]
-#     )
-# )
+# ---------------------------------------------------------------------------
+# Maintenance: drop the staging DB if you want a clean slate.
+# ---------------------------------------------------------------------------
+
+
+def reset_staging() -> None:
+    """Delete the staging sqlite and its WAL files. Used in tests."""
+    for suffix in ("", "-wal", "-shm"):
+        p = STAGING_DB.with_name(STAGING_DB.name + suffix)
+        if p.is_file():
+            p.unlink()
+    if STAGING_DB.parent.is_dir():
+        # Also wipe any straggler per-plant parquets
+        _remove_legacy_per_plant_files()
+
+
+# Convenience for "wipe everything and start fresh"; unused by load_bronze_data.
+def clean_start() -> None:
+    if DATA_DIR.is_dir():
+        shutil.rmtree(DATA_DIR)

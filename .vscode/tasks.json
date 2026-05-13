@@ -90,7 +90,7 @@
     },
     {
       "label": "RHS: refresh dictionary",
-      "detail": "Scrape rhs_urls then rhs detail pages into data/rhs.parquet. Skips step 2 if step 1 fails.",
+      "detail": "Scrape rhs_urls then rhs detail pages into data/rhs/data.parquet. Resumable — re-runs pick up where staging sqlite left off. Skips step 2 if step 1 fails.",
       "type": "shell",
       "command": "$env:PYTHONUNBUFFERED='1'; & '${workspaceFolder}/.venv/Scripts/python.exe' -u load_bronze_data.py --site rhs_urls; if ($?) { & '${workspaceFolder}/.venv/Scripts/python.exe' -u load_bronze_data.py --site rhs }",
       "options": {

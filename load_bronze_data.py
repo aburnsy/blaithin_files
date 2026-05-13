@@ -5,17 +5,18 @@ import os
 from pathlib import Path
 
 import polars as pl
-import pyarrow.dataset as ds
 
 from src.common.freshness import should_scrape
 from src.common.nurseries import scraped_nursery_slugs
 from src.common.storage import export_data_locally
 from src.scrapers import (
     arboretum,
+    ardcarne,
     ballyrobert,
     beattys,
     bloombox,
     brown_envelope,
+    bulbi,
     carragh,
     connecting_to_nature,
     cullen,
@@ -26,13 +27,18 @@ from src.scrapers import (
     fluwel,
     future_forests,
     gardens4you,
+    greengardenflowerbulbs,
     hedges_direct,
     hedgingie,
     hopeless_botanics,
     howbert_mays,
+    johnstown,
+    jparkers,
     mid_ulster,
     mount_venus,
+    mr_middleton,
     newlands,
+    promesse,
     plant_store,
     plantgift,
     quickcrop,
@@ -78,15 +84,16 @@ def _run_matching(*, llm_enabled: bool) -> None:
         if not parquets:
             print(f"No parquets for {nursery}, skipping.")
             continue
-        frames.append(pl.read_parquet(parquets[-1]).with_columns(pl.lit(nursery).alias("source")))
+        df = pl.read_parquet(parquets[-1]).with_columns(pl.lit(nursery).alias("source"))
+        if "product_name" in df.columns and "product_name_raw" not in df.columns:
+            df = df.rename({"product_name": "product_name_raw"})
+        frames.append(df)
 
     if not frames:
         raise SystemExit("No nursery parquets found — run scrapes first.")
 
-    products_df = pl.concat(frames, how="diagonal_relaxed").rename(
-        {"product_name": "product_name_raw"}
-    )
-    rhs_df = pl.read_parquet("data/rhs.parquet")
+    products_df = pl.concat(frames, how="diagonal_relaxed")
+    rhs_df = pl.read_parquet("data/rhs/data.parquet")
 
     matched = run_with_llm_fallback(products_df, rhs_df, llm_enabled=llm_enabled)
     out = Path("data/products_matched.parquet")
@@ -96,10 +103,12 @@ def _run_matching(*, llm_enabled: bool) -> None:
 
 def main(params):
     if params.site in SCRAPED_NURSERIES:
+        from src.common.logging import get_logger
+        log = get_logger("load_bronze")
         force = _force_from_env_or_arg(params.force)
         max_age = _max_age_days_from_env()
         run, reason = should_scrape(params.site, max_age_days=max_age, force=force)
-        print(reason)
+        log.info("freshness_gate", site=params.site, run=run, reason=reason)
         if not run:
             return
 
@@ -212,6 +221,34 @@ def main(params):
             export_data_locally(
                 table=famous_roses.get_product_data(),
             )
+        case "bulbi":
+            export_data_locally(
+                table=bulbi.get_product_data(),
+            )
+        case "greengardenflowerbulbs":
+            export_data_locally(
+                table=greengardenflowerbulbs.get_product_data(),
+            )
+        case "johnstown":
+            export_data_locally(
+                table=johnstown.get_product_data(),
+            )
+        case "mr_middleton":
+            export_data_locally(
+                table=mr_middleton.get_product_data(),
+            )
+        case "jparkers":
+            export_data_locally(
+                table=jparkers.get_product_data(),
+            )
+        case "ardcarne":
+            export_data_locally(
+                table=ardcarne.get_product_data(),
+            )
+        case "promesse":
+            export_data_locally(
+                table=promesse.get_product_data(),
+            )
         case "rhs_urls":
             export_data_locally(
                 table=rhs_urls.get_plant_urls(),
@@ -219,9 +256,6 @@ def main(params):
             )
         case "rhs":
             rhs.get_plants_detail(pl.read_parquet("data/rhs_urls.parquet").to_dicts())
-            pl.scan_pyarrow_dataset(ds.dataset("data/rhs/")).collect().write_parquet(
-                "data/rhs.parquet"
-            )
 
         case _:
             raise ValueError(f"Unhandled site: {params.site!r}")
@@ -257,4 +291,6 @@ if __name__ == "__main__":
     if args.matching:
         _run_matching(llm_enabled=not args.no_llm)
     else:
+        from src.common.logging import configure as _configure_logging
+        _configure_logging(source=args.site, force=True)
         main(args)

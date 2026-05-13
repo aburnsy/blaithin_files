@@ -72,6 +72,7 @@ class BaseScraper(ABC):
     def run(self) -> list[dict]:
         """Run the full scrape. Returns list of product dicts."""
         results: list[dict] = []
+        seen_product_urls: set[str] = set()
         for category_url, category_name in self.discover_categories():
             try:
                 listing_html = self.fetch(category_url)
@@ -81,6 +82,9 @@ class BaseScraper(ABC):
                 continue
 
             for product_url in self.parse_listing(listing_html):
+                if product_url in seen_product_urls:
+                    continue
+                seen_product_urls.add(product_url)
                 self.report.products_in += 1
                 try:
                     product_html = self.fetch(product_url)

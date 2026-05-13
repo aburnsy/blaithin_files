@@ -22,16 +22,26 @@ def add_defaults_to_fields(
 def _apply_vat_if_needed(df: pl.DataFrame, source: str) -> pl.DataFrame:
     # Sites flagged vat_included=false (currently Tullys trade portal and
     # GreenGardenFlowerBulbs) list ex-VAT prices; Irish customers pay 23%
-    # on top, so we bake that into the bronze price column.
+    # on top, so we bake that into the bronze price column. Older scrapers
+    # use "price"; newer Shopify/Woo/Magento bases use "price_native".
+    #
+    # If config loading fails we MUST NOT silently write ex-VAT data for a
+    # source that's flagged vat_included=false — that produced wrong Tullys
+    # prices once already. Raise loudly instead.
     try:
         cfg = load_nurseries().get(source)
     except Exception as exc:
-        print(f"WARN: could not load nursery config for {source!r}: {exc}")
+        raise RuntimeError(
+            f"Cannot load nurseries config while writing {source!r}: {exc}. "
+            "Refusing to write — would silently skip VAT for any ex-VAT source."
+        ) from exc
+    if cfg is None or cfg.vat_included:
         return df
-    if cfg is None or cfg.vat_included or "price" not in df.columns:
+    price_col = next((c for c in ("price", "price_native") if c in df.columns), None)
+    if price_col is None:
         return df
     print(f"Applying IE VAT @ {IE_VAT_RATE:.0%} to {source} (ex-VAT source)")
-    return df.with_columns((pl.col("price") * (1 + IE_VAT_RATE)).alias("price"))
+    return df.with_columns((pl.col(price_col) * (1 + IE_VAT_RATE)).alias(price_col))
 
 
 def export_data_locally(table: list[dict] | None, dated: bool = True) -> None:
@@ -53,7 +63,7 @@ def export_data_locally(table: list[dict] | None, dated: bool = True) -> None:
             df, field_name="input_date", default_value=datetime.date.today()
         )
 
-        file_path = Path("data") / source / f"{datetime.date.today().strftime('%Y-%m-%d')}.parquet"
+        file_path = Path("data") / source / "data.parquet"
     else:
         file_path = Path("data") / f"{source}.parquet"
 

@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "nurseries.yaml"
 
 Currency = Literal["EUR", "GBP", "USD"]
-DeliveryType = Literal["flat", "tiered", "by_weight", "quote_only", "free"]
+DeliveryType = Literal["flat", "tiered", "by_weight", "quote_only", "free", "per_box"]
 RunsOn = Literal["github-actions", "self-hosted"]
 
 
@@ -35,6 +35,11 @@ class NurseryConfig(BaseModel):
     vat_included: bool
     delivery_type: DeliveryType
     delivery_fees: list[DeliveryFee] = Field(default_factory=list)
+    # Per-box / per-pallet rates for nurseries that ship in fixed-size
+    # consignments (B2B wholesalers, large-plant couriers). Recorded for
+    # downstream "what would this order actually cost to ship?" calculations.
+    delivery_per_box_eur: float | None = None
+    delivery_per_pallet_eur: float | None = None
     min_order_eur: float = 0
     runs_on: RunsOn = "github-actions"
     ships_live_plants_to_ireland: bool = True

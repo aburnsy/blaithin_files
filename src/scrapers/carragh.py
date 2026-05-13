@@ -78,7 +78,11 @@ class CaraghScraper(BaseScraper):
                 continue
             if "caraghnurseries.ie/product/" in href and "product-category" not in href:
                 url = re.sub(r"^https?://(?:www\.)?caraghnurseries\.ie", _BASE, href)
-                url = url.split("?", 1)[0].rstrip("/")
+                # Canonical product URLs have a trailing slash; without it
+                # every fetch eats a 301 round-trip. Normalise then re-append.
+                url = url.split("?", 1)[0].rstrip("/") + "/"
+                if url == f"{_BASE}/product/vouchers/":
+                    continue
                 if url not in seen:
                     seen.add(url)
                     unique.append(url)

@@ -7,34 +7,12 @@ import polars as pl
 import requests
 from bs4 import BeautifulSoup
 
+from src.scrapers.rhs_enums import PLANT_TYPE as plant_type_mapping
+
 
 def _log(msg: str) -> None:
     """Print one line prefixed with HH:MM:SS, flushed immediately."""
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}", flush=True)
-
-plant_type_mapping = {
-    1: "Herbaceous Perennial",
-    2: "Climber Wall Shrub",
-    3: "Bedding",
-    4: "Bulbs",
-    5: "Ferns",
-    6: "Shrubs",
-    7: "Annual Biennial",
-    8: "Alpine Rockery",
-    9: "Roses",
-    10: "Grasses",
-    11: "Conservatory Greenhouse",
-    12: "Fruit Edible",
-    13: "Trees",
-    14: "Houseplants",
-    15: "Cactus Succulent",
-    16: "Aquatic",
-    17: "Bamboos",
-    18: "Bogs",
-    19: "Conifers",
-    20: "Herbs",
-    21: "Palms",
-}
 
 
 def get_plant_urls(plant_types: list | None = None):
