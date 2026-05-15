@@ -70,12 +70,31 @@
     },
     {
       "label": "Match: run pipeline",
-      "detail": "Run the gnparser+rapidfuzz+LLM matching pipeline against the latest per-site parquets.",
+      "detail": "Run the gnparser+rapidfuzz+LLM matching pipeline against the latest per-site parquets. Skips if data/products_matched.parquet is newer than every input.",
       "type": "process",
       "command": "${workspaceFolder}/.venv/Scripts/python.exe",
       "args": [
-        "load_bronze_data.py",
-        "--matching"
+        "run_matching.py"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true,
+        "echo": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Match: run pipeline (force)",
+      "detail": "Same as 'Match: run pipeline' but bypasses the idempotency check.",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": [
+        "run_matching.py",
+        "--force"
       ],
       "options": {
         "cwd": "${workspaceFolder}"

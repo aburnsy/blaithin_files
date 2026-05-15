@@ -38,12 +38,23 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from src.common.freshness import should_scrape  # noqa: E402
 from src.common.nurseries import scraped_nursery_slugs  # noqa: E402
 
 # Single source of truth — config/nurseries.yaml entries with `runs_on:
 # github-actions`. Same list driving load_bronze_data.py's freshness gate
 # and matching loop.
 ALL_SITES: tuple[str, ...] = scraped_nursery_slugs()
+
+
+def _max_age_days_from_env(default: int = 30) -> int:
+    raw = os.environ.get("SCRAPE_MAX_AGE_DAYS")
+    if raw is None:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        return default
 
 
 def run_site(
@@ -134,11 +145,31 @@ def main(argv: list[str] | None = None) -> int:
     log_dir = args.logs_dir or REPO_ROOT / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"Scraping {len(sites)} site(s) with concurrency {args.concurrency}")
+    # Pre-filter sites through the freshness gate so skipped nurseries never
+    # spawn a subprocess and never overwrite logs/<site>.log.
+    max_age = _max_age_days_from_env()
+    skipped: list[tuple[str, str]] = []
+    to_scrape: list[str] = []
+    for s in sites:
+        run, reason = should_scrape(s, max_age_days=max_age, force=args.force)
+        if run:
+            to_scrape.append(s)
+        else:
+            skipped.append((s, reason))
+
+    print(
+        f"Scraping {len(to_scrape)} site(s) with concurrency {args.concurrency} "
+        f"({len(skipped)} skipped by freshness gate)"
+    )
     print(f"Logs:    {log_dir}")
     if args.force:
         print("Force:   FORCE_SCRAPE=1 (freshness gate bypassed)")
     print()
+
+    if not to_scrape:
+        return 0
+
+    sites = to_scrape
 
     overall_start = time.monotonic()
     by_site: dict[str, tuple[str, int, float, Path]] = {}

@@ -3,13 +3,15 @@ selenium
 undetected-chromedriver
 setuptools  # provides distutils shim for undetected-chromedriver on Python 3.12+
 bs4
-polars==0.20.16
+polars>=1.40,<2
+tzdata  # Windows zoneinfo data — required by polars 1.x datetime serialization
 pyarrow
 pytest
 lxml_html_clean
 pydantic>=2
 pyyaml
 httpx
+curl-cffi  # Chrome TLS/JA3 impersonation for gardens4you (Cloudflare bot mgmt)
 pygnparser
 rapidfuzz
 anthropic

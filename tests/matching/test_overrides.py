@@ -59,3 +59,40 @@ def test_upsert_replaces_existing(tmp_overrides):
     assert len(loaded) == 1
     assert loaded[0].rhs_id == 98765
     assert loaded[0].source == "manual"
+
+
+def test_save_is_atomic_no_tmp_left_behind(tmp_overrides):
+    """save_overrides should leave no .tmp file behind after success."""
+    save_overrides([
+        MatchOverride(product_name_clean="rosa rugosa", rhs_id=1, source="llm"),
+    ])
+    tmp = tmp_overrides.with_suffix(".parquet.tmp")
+    assert not tmp.exists(), f"stale temp file present: {tmp}"
+    assert tmp_overrides.exists()
+
+
+def test_save_does_not_corrupt_on_crash(tmp_overrides, monkeypatch):
+    """If write_parquet raises mid-save, the live file is untouched."""
+    save_overrides([
+        MatchOverride(product_name_clean="original", rhs_id=42, source="llm"),
+    ])
+
+    # Sabotage the next write_parquet call
+    import polars as pl
+    original_write = pl.DataFrame.write_parquet
+
+    def boom(self, *args, **kwargs):
+        raise RuntimeError("disk full")
+    monkeypatch.setattr(pl.DataFrame, "write_parquet", boom)
+
+    with pytest.raises(RuntimeError):
+        save_overrides([
+            MatchOverride(product_name_clean="new", rhs_id=99, source="llm"),
+        ])
+
+    # Restore and reload — original must still be there
+    monkeypatch.setattr(pl.DataFrame, "write_parquet", original_write)
+    loaded = load_overrides()
+    assert len(loaded) == 1
+    assert loaded[0].product_name_clean == "original"
+    assert loaded[0].rhs_id == 42

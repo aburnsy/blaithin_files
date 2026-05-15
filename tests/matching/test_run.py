@@ -54,27 +54,33 @@ def test_pipeline_classifies_non_plants(rhs_df, products_df):
     assert "pot" in categories
 
 
-@patch("src.matching.llm.Anthropic")
-def test_llm_fallback_persists_overrides(mock_client_cls, rhs_df, products_df, tmp_path, monkeypatch):
+@patch("src.matching.llm._invoke_claude")
+def test_llm_fallback_persists_overrides(mock_invoke, rhs_df, products_df, tmp_path, monkeypatch):
     # Force everything into "unmatched" by dropping all RHS data the deterministic pipeline could find
     empty_rhs = rhs_df.head(0)
     overrides_path = tmp_path / "match_overrides.parquet"
+    audit_dir = tmp_path / "llm_audit"
     monkeypatch.setattr("src.matching.overrides.OVERRIDES_PARQUET", overrides_path)
+    monkeypatch.setattr("src.matching.run.AUDIT_DIR", audit_dir)
 
     import json
-    from unittest.mock import MagicMock
 
     from src.matching.normalize import clean_product_name
-    mock_client = MagicMock()
-    mock_client_cls.return_value = mock_client
+
     # Mock returns "unmatched/non-plant" for every product, keyed by cleaned name
-    mock_client.messages.create.return_value = MagicMock(
-        content=[MagicMock(text=json.dumps([
-            {"product_name_clean": clean_product_name(p), "rhs_id": None, "is_plant": False, "product_category": "other", "confidence": 0.3, "reasoning": "no RHS data"}
-            for p in products_df.select("product_name_raw").to_series().to_list()
-        ]))]
-    )
+    mock_invoke.return_value = json.dumps([
+        {"product_name_clean": clean_product_name(p), "rhs_id": None, "is_plant": False, "product_category": "other", "confidence": 0.3, "reasoning": "no RHS data"}
+        for p in products_df.select("product_name_raw").to_series().to_list()
+    ])
 
     matched = run_with_llm_fallback(products_df, empty_rhs, llm_enabled=True)
     # All products fall through to LLM; LLM marks them all as non-plant
     assert (matched.select("match_method").to_series() == "llm").all()
+
+    # Audit JSONL was written with one line per resolved override
+    audit_files = list(audit_dir.glob("resolutions_*.jsonl"))
+    assert len(audit_files) == 1, f"expected exactly one audit file, got {audit_files}"
+    lines = audit_files[0].read_text(encoding="utf-8").strip().splitlines()
+    assert len(lines) == products_df.height
+    parsed = [json.loads(line) for line in lines]
+    assert all(p["source"] == "llm" for p in parsed)

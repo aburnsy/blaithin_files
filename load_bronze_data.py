@@ -2,7 +2,6 @@
 
 import argparse
 import os
-from pathlib import Path
 
 import polars as pl
 
@@ -80,46 +79,7 @@ def _max_age_days_from_env(default: int = 30) -> int:
         return default
 
 
-def _run_matching(*, llm_enabled: bool) -> None:
-    """Load latest per-nursery parquets + RHS, run the matching pipeline, write output."""
-
-    from src.matching.run import run_with_llm_fallback
-
-    frames = []
-    for nursery in SCRAPED_NURSERIES:
-        nursery_dir = Path(f"data/{nursery}")
-        parquets = sorted(nursery_dir.glob("*.parquet"))
-        if not parquets:
-            print(f"No parquets for {nursery}, skipping.")
-            continue
-        df = pl.read_parquet(parquets[-1]).with_columns(pl.lit(nursery).alias("source"))
-        if "product_name" in df.columns and "product_name_raw" not in df.columns:
-            df = df.rename({"product_name": "product_name_raw"})
-        frames.append(df)
-
-    if not frames:
-        raise SystemExit("No nursery parquets found — run scrapes first.")
-
-    products_df = pl.concat(frames, how="diagonal_relaxed")
-    rhs_df = pl.read_parquet("data/rhs/data.parquet")
-
-    matched = run_with_llm_fallback(products_df, rhs_df, llm_enabled=llm_enabled)
-    out = Path("data/products_matched.parquet")
-    matched.write_parquet(out)
-    print(f"Wrote {len(matched)} matched products -> {out}")
-
-
 def main(params):
-    if params.site in SCRAPED_NURSERIES:
-        from src.common.logging import get_logger
-        log = get_logger("load_bronze")
-        force = _force_from_env_or_arg(params.force)
-        max_age = _max_age_days_from_env()
-        run, reason = should_scrape(params.site, max_age_days=max_age, force=force)
-        log.info("freshness_gate", site=params.site, run=run, reason=reason)
-        if not run:
-            return
-
     match params.site:
         case "tullys":
             export_data_locally(
@@ -303,23 +263,13 @@ def main(params):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Scrape nurseries, manage RHS data, or run the matching pipeline."
-    )
-    mode = parser.add_mutually_exclusive_group(required=True)
-    mode.add_argument(
-        "--site",
-        help="Name of the site you would like to fetch data for.",
-        choices=[*SCRAPED_NURSERIES, "rhs", "rhs_urls"],
-    )
-    mode.add_argument(
-        "--matching",
-        action="store_true",
-        help="Run the matching pipeline against the latest scraped data.",
+        description="Scrape a nursery or refresh the RHS dictionary."
     )
     parser.add_argument(
-        "--no-llm",
-        action="store_true",
-        help="When used with --matching, skip the LLM fallback (deterministic only).",
+        "--site",
+        required=True,
+        help="Name of the site you would like to fetch data for.",
+        choices=[*SCRAPED_NURSERIES, "rhs", "rhs_urls"],
     )
     parser.add_argument(
         "--force",
@@ -328,9 +278,17 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    if args.matching:
-        _run_matching(llm_enabled=not args.no_llm)
-    else:
-        from src.common.logging import configure as _configure_logging
-        _configure_logging(source=args.site, force=True)
-        main(args)
+    # Freshness gate runs BEFORE configuring per-site file logging so a skip
+    # doesn't overwrite the previous successful scrape log at logs/<site>.log.
+    if args.site in SCRAPED_NURSERIES:
+        force = _force_from_env_or_arg(args.force)
+        max_age = _max_age_days_from_env()
+        run, reason = should_scrape(args.site, max_age_days=max_age, force=force)
+        if not run:
+            print(reason)
+            raise SystemExit(0)
+        print(reason)
+
+    from src.common.logging import configure as _configure_logging
+    _configure_logging(source=args.site, force=True)
+    main(args)
