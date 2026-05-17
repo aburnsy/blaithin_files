@@ -1,11 +1,11 @@
 [
   {
     "raw": "Standard Eucalyptus Gunnii Tree",
-    "expected_clean": "Standard Eucalyptus Gunnii Tree"
+    "expected_clean": "Eucalyptus gunnii"
   },
   {
     "raw": "Magnolia soulangeana Alexandrina",
-    "expected_clean": "Magnolia soulangeana Alexandrina"
+    "expected_clean": "Magnolia soulangeana alexandrina"
   },
   {
     "raw": "Brugmansia tricolour",
@@ -13,67 +13,67 @@
   },
   {
     "raw": "Lythrum Morden Pink 9 cm pot",
-    "expected_clean": "Lythrum Morden Pink"
+    "expected_clean": "Lythrum morden pink"
   },
   {
     "raw": "Pennisetum Alopecuroides Herbstzauber",
-    "expected_clean": "Pennisetum Alopecuroides Herbstzauber"
+    "expected_clean": "Pennisetum alopecuroides herbstzauber"
   },
   {
     "raw": "Aquilegia Ruby Port x 3",
-    "expected_clean": null
+    "expected_clean": "Aquilegia ruby port"
   },
   {
     "raw": "Climbing Rose New Dawn",
-    "expected_clean": "Climbing Rose New Dawn"
+    "expected_clean": "Climbing rose new dawn"
   },
   {
     "raw": "Prunus Laurocerasus Etna 9 cm pot",
-    "expected_clean": "Prunus Laurocerasus Etna"
+    "expected_clean": "Prunus laurocerasus etna"
   },
   {
     "raw": "Lonicera Deep Golden",
-    "expected_clean": "Lonicera Deep Golden"
+    "expected_clean": "Lonicera deep golden"
   },
   {
     "raw": "Cytisus Lena",
-    "expected_clean": "Cytisus Lena"
+    "expected_clean": "Cytisus lena"
   },
   {
     "raw": "Paeonia Francoise Ortegat Bare root",
-    "expected_clean": null
+    "expected_clean": "Paeonia francoise ortegat"
   },
   {
     "raw": "Magnolia Susan",
-    "expected_clean": "Magnolia Susan"
+    "expected_clean": "Magnolia susan"
   },
   {
     "raw": "Festuca glauca Elijah Blue P7",
-    "expected_clean": "Festuca glauca Elijah Blue"
+    "expected_clean": "Festuca glauca elijah blue"
   },
   {
     "raw": "Cotinus Golden Lady 9 cm pot",
-    "expected_clean": "Cotinus Golden Lady"
+    "expected_clean": "Cotinus golden lady"
   },
   {
     "raw": "Lonicera Red",
-    "expected_clean": "Lonicera Red"
+    "expected_clean": "Lonicera red"
   },
   {
     "raw": "Bamboo Fargesia Robusta Pingwu",
-    "expected_clean": "Bamboo Fargesia Robusta Pingwu"
+    "expected_clean": "Bamboo fargesia robusta pingwu"
   },
   {
     "raw": "Pennisetum alopecuroides Lumen Gold",
-    "expected_clean": "Pennisetum alopecuroides Lumen Gold"
+    "expected_clean": "Pennisetum alopecuroides lumen gold"
   },
   {
     "raw": "Fig carica Blanca Gota",
-    "expected_clean": "Fig carica Blanca Gota"
+    "expected_clean": "Fig carica blanca gota"
   },
   {
     "raw": "Rubus fruticosus Nessy 120 cm pot",
-    "expected_clean": "Rubus fruticosus Nessy"
+    "expected_clean": "Rubus fruticosus nessy"
   },
   {
     "raw": "Camellia japonica red 9cm",
@@ -81,19 +81,19 @@
   },
   {
     "raw": "Fern Dicksonia antarctica",
-    "expected_clean": "Fern Dicksonia antarctica"
+    "expected_clean": "Fern dicksonia antarctica"
   },
   {
     "raw": "Picea Glauca J.w. Daisys White",
-    "expected_clean": "Picea Glauca J.w. Daisys White"
+    "expected_clean": "Picea glauca j.w. daisys white"
   },
   {
     "raw": "Miscanthus sinensis kleine Silberspinne",
-    "expected_clean": "Miscanthus sinensis kleine Silberspinne"
+    "expected_clean": "Miscanthus sinensis kleine silberspinne"
   },
   {
     "raw": "Standard Plum Opal",
-    "expected_clean": "Standard Plum Opal"
+    "expected_clean": "Plum opal"
   },
   {
     "raw": "Osmanthus burkwoodii 9 cm pot",
@@ -101,22 +101,22 @@
   },
   {
     "raw": "Lavender angustifolia Munstead 14 cm",
-    "expected_clean": "Lavender angustifolia Munstead"
+    "expected_clean": "Lavender angustifolia munstead"
   },
   {
     "raw": "Standard Rose Pink 19 cm pot",
-    "expected_clean": "Standard Rose Pink"
+    "expected_clean": "Rose pink"
   },
   {
     "raw": "Chaenomeles japonica Sargentii",
-    "expected_clean": "Chaenomeles japonica Sargentii"
+    "expected_clean": "Chaenomeles japonica sargentii"
   },
   {
     "raw": "Iris Tulip Festival",
-    "expected_clean": "Iris Tulip Festival"
+    "expected_clean": "Iris tulip festival"
   },
   {
     "raw": "Acer palmatum Phoenix",
-    "expected_clean": "Acer palmatum Phoenix"
+    "expected_clean": "Acer palmatum phoenix"
   }
 ]

@@ -144,7 +144,7 @@ def _log_method_breakdown(log, df: pl.DataFrame, label: str) -> None:
     log.info("match_method_breakdown", scope=label, counts=counts)
 
 
-def main(*, force: bool, llm_concurrency: int = 1) -> int:
+def main(*, force: bool, llm_concurrency: int = 1, llm_backend: str = "claude") -> int:
     configure_logging(source="matching", force=True)
     log = get_logger("matching")
 
@@ -211,7 +211,11 @@ def main(*, force: bool, llm_concurrency: int = 1) -> int:
     )
 
     matched = run_with_llm_fallback(
-        products_df, rhs_df, llm_enabled=True, llm_concurrency=llm_concurrency
+        products_df,
+        rhs_df,
+        llm_enabled=True,
+        llm_concurrency=llm_concurrency,
+        llm_backend=llm_backend,
     )
     _log_method_breakdown(log, matched, "rematched")
 
@@ -247,9 +251,25 @@ if __name__ == "__main__":
     parser.add_argument(
         "--llm-concurrency",
         type=int,
-        default=1,
-        help="Number of concurrent `claude -p` batches during LLM fallback (default 1).",
+        default=16,
+        help="Number of concurrent batches during LLM fallback (default 16).",
+    )
+    parser.add_argument(
+        "--llm-backend",
+        choices=["claude", "local"],
+        default="claude",
+        help=(
+            "LLM backend for residual resolution. 'claude' (default) shells out "
+            "to `claude -p` against Claude Haiku. 'local' hits the local Ollama "
+            "server (qwen3:14b by default; override via OLLAMA_MODEL)."
+        ),
     )
     args = parser.parse_args()
 
-    raise SystemExit(main(force=args.force, llm_concurrency=args.llm_concurrency))
+    raise SystemExit(
+        main(
+            force=args.force,
+            llm_concurrency=args.llm_concurrency,
+            llm_backend=args.llm_backend,
+        )
+    )

@@ -21,11 +21,12 @@ import pytest
 # Order doesn't matter — they're independent.
 _PRODUCTION_WRITE_PATHS: list[tuple[str, str]] = [
     ("src.matching.overrides.OVERRIDES_PARQUET", "match_overrides.parquet"),
-    ("src.matching.run.AUDIT_DIR", "llm_audit"),
     ("src.common.logging.LOG_DIR", "logs"),
     ("src.transforms.size_normalize.PRODUCTS_PARQUET", "products_matched.parquet"),
     ("src.common.report.REPORTS_DIR", "reports"),
 ]
+# Note: the LLM-audit JSONL directory is derived from OVERRIDES_PARQUET.parent
+# by src.matching.overrides._audit_dir, so it follows the monkeypatch above.
 
 
 @pytest.fixture(autouse=True)

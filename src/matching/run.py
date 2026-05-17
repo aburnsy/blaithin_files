@@ -6,10 +6,8 @@ a single bulk fuzzy call against the residual via ``src.matching.fuzzy``.
 
 from __future__ import annotations
 
-import json
 import time
 from datetime import UTC, datetime
-from pathlib import Path
 
 import polars as pl
 
@@ -26,8 +24,6 @@ from src.matching.fuzzy import (
 from src.matching.gnparser_wrap import ParseFailed, parse
 from src.matching.models import MatchOverride
 from src.matching.normalize import clean_product_name
-
-AUDIT_DIR = Path(__file__).resolve().parents[2] / "data" / "llm_audit"
 
 _PROGRESS_EVERY = 5_000
 
@@ -180,15 +176,34 @@ def run_with_llm_fallback(
     llm_enabled: bool = True,
     api_key: str | None = None,
     llm_concurrency: int = 1,
+    llm_backend: str = "claude",
 ) -> pl.DataFrame:
     """Run deterministic pipeline; LLM-resolve any residual; persist overrides; re-apply.
 
     This is the production entry point. The deterministic pipeline is also useful in
     isolation for fast offline test runs.
+
+    Args:
+        llm_backend: ``"claude"`` (default) shells out to ``claude -p`` against
+            Claude Haiku via :mod:`src.matching.llm`. ``"local"`` routes through
+            the local Ollama server (:mod:`src.matching.llm_local`). Default
+            stays on Claude until the local model is A/B-validated.
     """
 
-    from src.matching.llm import batch_resolve
-    from src.matching.overrides import load_overrides, save_overrides
+    if llm_backend == "local":
+        from src.matching.llm_local import batch_resolve
+    elif llm_backend == "claude":
+        from src.matching.llm import batch_resolve
+    else:
+        raise ValueError(
+            f"llm_backend must be 'local' or 'claude', got {llm_backend!r}"
+        )
+    from src.matching.overrides import (
+        append_jsonl_overrides,
+        load_overrides,
+        new_audit_path,
+        save_overrides,
+    )
 
     overrides = load_overrides()
     matched = run_matching(products_df, rhs_df, overrides=overrides, phase="initial")
@@ -202,9 +217,24 @@ def run_with_llm_fallback(
         log.info("llm_skipped", reason="no_residual")
         return matched
 
-    log.info("llm_phase_start", residual=residual)
+    # Dedupe by clean name: the same product (e.g. "Olea europaea") is often
+    # stocked by many nurseries, so a row-level list sends the same name to the
+    # LLM N times. One override applies to all rows via overrides_by_clean in
+    # the post-LLM deterministic re-run.
+    unmatched_names_unique = (
+        unmatched.select("product_name_clean")
+        .unique(maintain_order=True)
+        .to_series()
+        .to_list()
+    )
 
-    unmatched_names = unmatched.select("product_name_clean").to_series().to_list()
+    log.info(
+        "llm_phase_start",
+        residual=residual,
+        unique_names=len(unmatched_names_unique),
+    )
+
+    unmatched_names = unmatched_names_unique
 
     # Build a per-product top-K shortlist so each batch's prompt only carries the
     # few candidates that could plausibly match — keeps prompts in the KB range.
@@ -252,23 +282,14 @@ def run_with_llm_fallback(
     }
     log.info("llm_rhs_lookup_built", count=len(rhs_lookup))
 
-    # Audit log: append-only JSONL, one line per resolved override. Survives a
-    # corrupted parquet — the cache can be rebuilt from these files if needed.
-    AUDIT_DIR.mkdir(parents=True, exist_ok=True)
-    audit_path = AUDIT_DIR / f"resolutions_{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}.jsonl"
+    # Audit log: append-only JSONL, one line per resolved override. This is
+    # the source of truth for "what has been resolved" — the parquet snapshot
+    # is only rewritten once the run completes (see save_overrides call below).
+    audit_path = new_audit_path(datetime.now(UTC))
     log.info("llm_audit_log", path=str(audit_path))
 
-    # Running snapshot of every override (existing + newly resolved). We rewrite
-    # the parquet atomically after every batch so a crash never loses more than
-    # the batch in flight at the moment.
-    running_overrides = list(overrides)
-
     def _persist_batch(batch_overrides: list[MatchOverride]) -> None:
-        with audit_path.open("a", encoding="utf-8") as f:
-            for ov in batch_overrides:
-                f.write(json.dumps(ov.model_dump(mode="json"), default=str) + "\n")
-        running_overrides.extend(batch_overrides)
-        save_overrides(running_overrides)
+        append_jsonl_overrides(audit_path, batch_overrides)
 
     t0 = time.monotonic()
     new_overrides = batch_resolve(
@@ -285,7 +306,8 @@ def run_with_llm_fallback(
         elapsed_s=round(time.monotonic() - t0, 1),
     )
 
-    # Final state save (idempotent — the callback already wrote each batch).
+    # End-of-run parquet snapshot. Only reached if batch_resolve completed
+    # without raising — a crash leaves the audit JSONL as the recovery record.
     save_overrides(overrides + new_overrides)
 
     # Re-run the deterministic pipeline so the new overrides flow through

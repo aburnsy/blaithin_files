@@ -59,9 +59,9 @@ def test_llm_fallback_persists_overrides(mock_invoke, rhs_df, products_df, tmp_p
     # Force everything into "unmatched" by dropping all RHS data the deterministic pipeline could find
     empty_rhs = rhs_df.head(0)
     overrides_path = tmp_path / "match_overrides.parquet"
+    # The audit dir is derived from OVERRIDES_PARQUET.parent in src.matching.overrides
     audit_dir = tmp_path / "llm_audit"
     monkeypatch.setattr("src.matching.overrides.OVERRIDES_PARQUET", overrides_path)
-    monkeypatch.setattr("src.matching.run.AUDIT_DIR", audit_dir)
 
     import json
 

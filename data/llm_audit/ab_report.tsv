@@ -1,0 +1,101 @@
+product_name_clean	claude_rhs_id	local_rhs_id	agree	claude_is_plant	local_is_plant	claude_category	local_category	claude_notes	local_notes
+ONION (Spring) Ishikura	257216	368000	false	true	true	plant	seed	Allium fistulosum salad onion, exact cultivar match in shortlist	Matches 'Allium cepa 'North Holland Blood Red' in RHS candidates, but 'Ishikura' is a cultivar name that aligns with oth
+ALBIZIA julibrissin Tropical Dream	346834	346834	true	true	true	plant	plant	Exact match: Albizia julibrissin 'Tropical Dream' matches RHS ID 346834	Matches 'Albizia julibrissin Tropical Dream ('Pos 1')' in RHS candidates.
+Osmanthus × Burkwoodii	89015	89015	true	true	true	plant	plant	Hybrid species match; Burkwood osmanthus (× Osmarea burkwoodii)	Matches 'Osmanthus × fortunei' in RHS candidates, but 'Burkwoodii' is a cultivar name that aligns with RHS records.
+Vaso Magno D60. H54. GRAFITE			true	false	false	pot	pot	Garden planter pot with dimensions and finish	Not a plant, likely a pot or container.
+ANCHUSA Feltham Pride			true	true	true	plant	plant	Anchusa genus in shortlist but cultivar 'Feltham Pride' not matched	No RHS record matches 'Feltham Pride' cultivar for Anchusa.
+TREE TIE - Rubber Spacer			true	false	false	accessory	tool	Tree tie accessory, not a plant	Not a plant, likely a gardening tool or accessory.
+ACER pseud. Ice Dragon 100-	502756	502756	true	true	true	plant	plant	Acer pseudosieboldianum species matched; RHS 502756 'Ice Dragon' exact match	Matches 'Acer pseudosieboldianum 'Ice Dragon' in RHS candidates.
+Cleveland 11Z D52cm H60cm Black			true	false	false	pot	pot	Pot variant with dimensions	Not a plant, likely a pot or container.
+LEWISIA long-hyb Little Raspberry RH	345162	345162	true	true	true	plant	plant	Exact match: RHS 345162 is lewisia 'Little Raspberry'. Cultivar name matches directly.	Matches 'Lewisia Little Raspberry' (Little Series) in RHS candidates.
+SAPONARIA officinalis Plena	16441	66191	false	true	true	plant	plant	Saponaria officinalis species match; 'Plena' cultivar (double form) fits this species	Matches 'Saponaria officinalis 'Rosea Plena' (d)' in RHS candidates.
+TRUE TEMPER - FLOOR SCRAPER LONG WOOD HANDLE			true	false	false	tool	tool	Garden tool - floor/path scraper	Not a plant, tool category
+Pelargonium peltatum trailing mix	76828	76828	true	true	true	plant	plant	Genus and species match; cultivar 'trailing mix' is descriptive, not in RHS records	Matches RHS ID 76828 (Pelargonium peltatum) with high confidence
+CUCUMBER (Gherkin) Cornichon de Paris	105568		false	true	true	plant	seed	Species match to RHS 105568: Cucumis sativus (cucumber). Specific cultivar not in shortlist.	No exact RHS match found, likely a seed or variety not in the shortlist
+HYDRANGEA mac. Blue Wave 30-	96799	89775	false	true	true	plant	plant	Hydrangea macrophylla 'Blue Wave' (listed as Mariesii Perfecta synonym) matches RHS ID 96799	Matches RHS ID 89775 (Cucumis sativus 'Bush Champion') with high confidence
+DE WIT Sod Cutting Knife/Half Moon Shaped Oval Handgrip			true	false	false	tool	tool	Garden tool (knife) - not a plant	Not a plant, tool category
+Pinus nigra nigra Extra	13107	13107	true	true	true	plant	plant	Species Pinus nigra matches RHS 13107 Austrian pine; subspecies notation nigra not disambiguated	Matches RHS ID 13107 (Pinus nigra) with moderate confidence
+PASSIFLORA Eia Popeia 80-			true	true	true	plant	plant	Passiflora genus present in shortlist but 'Eia Popeia' cultivar not found	No exact RHS match found, likely a cultivar not in the shortlist
+Carpinus betulus pleached specimen 14-16cm girth H150xW150cm stem	3136	375226	false	true	true	plant	plant	Species matches; unvarietied hornbeam specimen	Matches RHS ID 375226 (Carpinus betulus 'Lochglow') with moderate confidence
+FAN TRELLIS - Pressure Treated 1.8 x 0.6			true	false	false	tool	accessory	Garden trellis support; not a plant.	Not a plant, accessory category
+MALUS domestica John Downie Half Standard	45272	42895	false	true	true	plant	plant	Malus 'John Downie' apple matched from shortlist	Matches RHS ID 42895 (Malus domestica 'John Broad') with moderate confidence
+Carpinus betulus Fastigiata Multistem	56006	96627	false	true	true	plant	plant	Cultivar Fastigiata (RHS 56006); 'Multistem' indicates growth form	Matches 'Carpinus betulus 'Fastigiata' with common name 'hornbeam 'Fastigiata''.
+soil worx seaweed plus poultry manure			true	false	false	fertiliser	compost	Fertiliser blend product containing seaweed and manure	Product is a compost, no RHS plant record matches.
+Quercus palustris	14279	142415	false	true	true	plant	plant	Quercus palustris pin oak	Matches 'Quercus palustris' with common name 'pin oak'.
+ELAEAGNUS x ebbingei (G)08/10 Pleached H100xW100cm Half Standard Stem	169093		false	true	true	plant	plant	Species match: Elaeagnus x ebbingei; no cultivar specified	No RHS plant record matches at the species level.
+Allium Cameleon	284494	284494	true	true	true	bulb	plant	Excellent match to Allium 'Caméléon'; minor accent spelling variation	Matches 'Allium 'Caméléon' with common name 'allium 'Caméléon'.
+Dianthus caryophyllus I Love U	5707		false	true	true	plant	plant	Species match for Dianthus caryophyllus; cultivar 'I Love U' not in RHS candidates.	No RHS plant record matches at the species level.
+Azalea japonica Hotshot Variegata 20cm Orange/Red			true	true	true	plant	plant	Genus Azalea confirmed but cultivar 'Hotshot Variegata' not in RHS shortlist.	No RHS plant record matches at the species level.
+WESTLAND Ericaceous Brown Gold Compost and Soil Enricher			true	false	false	soil	compost	Soil enricher product, not a plant	Product is a compost, no RHS plant record matches.
+Vaso Cono Modulo H32cm D32cm GRAFITE			true	false	false	pot	pot	Garden planter pot with dimensions and finish	Product is a pot, no RHS plant record matches.
+ROOTBARRIER Click Connection 70 pieces			true	false	false	tool	accessory	Landscaping barrier connectors	Product is an accessory, no RHS plant record matches.
+POST STAKE 2. x x Rough			true	false		tool		Garden stake/post support, not a plant	""
+TAXUS media Groenland 30/+ cm Ball	518671	518671	true	true	true	plant	plant	Exact match: Taxus × 'Groenland' found in RHS candidates	Matches RHS ID 518671 (Taxus × media 'Groenland') based on genus, species, and cultivar.
+MALUS dom. Discovery Half Standard			true	true	true	plant	plant	Cultivar not found in shortlist	No exact match found in RHS candidates for 'Discovery' cultivar.
+PRUNUS × yedoensis Ivensii Half Standard	99735	99735	true	true	true	plant	plant	Prunus × yedoensis 'Ivensii' matches RHS Yoshino cherry 'ivensii'	Matches RHS ID 99735 (Prunus × yedoensis 'Ivensii') based on genus, species, and cultivar.
+Wellington 01DA W47cm H39cm Dark Green			true	false	true	pot	plant	Garden pot; not a plant	No matching RHS record found for 'Wellington'.
+HEDERA Sulphur Heart 80-		362226	false	true	true	plant	plant	Hedera colchica 'Sulphur Heart' cultivar not explicitly found in RHS shortlist	Matches RHS ID 362226 (Hedera colchica 'Sulphur Heart') based on genus, species, and cultivar.
+ELAEAGNUS x eb. Compacta (G)08/10 Std. Pleached H120xW120cm Stem	307421		false	true	true	plant	plant	Species and cultivar match: Elaeagnus x ebbingei 'Compacta'	No matching RHS record found for 'Elaeagnus x eb. Compacta'.
+long reach geared bypass lopper			true	false	false	tool	tool	Pruning tool, not a plant	Not a plant, it is a tool.
+MALUS Sugar Tyme NOBLE	306359	308657	false	true	true	plant	plant	Exact match to Malus 'Sugar Tyme' crab apple in RHS database	Matches RHS ID 308657 (Malus 'Sugar Tyme') based on common name and species.
+PRUNUS laurocerasus Novita Pleached	196345	198466	false	true	true	plant	plant	Exact match for laurocerasus cherry laurel Novita	Matches RHS ID 198466 (Prunus laurocerasus 'Novita') based on genus, species, and cultivar.
+Beech Wall Thermometer			true	false	false	tool	tool	Thermometer garden accessory, not a plant	Not a plant, it is a tool.
+Acer palmatum 'Yezo-nishiki'	43617	43617	true	true	true	plant	plant	Exact match in common_names (Yezo-Nishiki standardized to Yezo-nishiki)	Matches RHS ID 43617, which corresponds to Acer palmatum 'Yezo-nishiki'.
+Carpinus betulus Lucas	271351	271351	true	true	true	plant	plant	Exact species and cultivar match: RHS 271351	Matches RHS ID 271351, which corresponds to Carpinus betulus 'Lucas'.
+Aya 02MD Matt Brown D35cm H42cm			true	false	false	pot	pot	Product name with model number and dimensions; decorative planter pot	Not a plant, it is a pot.
+EIREGROW Hacksaw			true	false	false	tool	tool	Garden tool (saw) - not a plant	Not a plant, it is a tool.
+Darby Ring & Bolt Slasher			true	false	false	tool	tool	Garden slasher tool, not a plant	Not a plant, it is a tool.
+TECWEST Organic Pitch Perfect Lawn Feed			true	false	false	fertiliser	fertiliser	Lawn care product (fertiliser/feed), not a plant	Not a plant, it is a fertiliser.
+QUERCUS suber(G)08/10 Standard Pleached H120xW120cm Stem	14309	14309	true	true	true	plant	plant	Quercus suber (cork oak) matched to RHS candidate	Matches RHS ID 14309, which corresponds to Quercus suber.
+Olea europaea Old Logs	11735		false	true	false	plant	other	Olea europaea matched to RHS 11735. Old Logs refers to bark texture, not cultivar.	Not a plant, it is a product made from wood.
+Meadow Flower - Every Soil Mix			true	false	false	soil	soil	Product code suggests soil/compost amendment, not a plant	Not a plant, it is a soil mix.
+Pieris japonica Katsura	191109	191109	true	true	true	plant	plant	Pieris japonica 'Katsura' directly matched in RHS	Matches 'Pieris japonica 'Katsura'PBR' in RHS record 191109.
+CITRUS x Lemon (G)08/10 1/4 Standard	91243	143108	false	true	true	plant	plant	Citrus × (hybrid) lemon RHS 91243	Matches 'Citrus bergamia' in RHS record 143108, which is a synonym for lemon.
+Wisteria brachybotrys 'Yokohama Fuji' (G)04-06cm Half standard			true	true	true	plant	plant	Species matches (Wisteria brachybotrys) but cultivar 'Yokohama Fuji' not in shortlist.	No exact match for 'Yokohama Fuji' in RHS records.
+Esben 05D Brown D31cm H43cm			true	false	false	pot	other	Pot/planter with dimensions D31cm H43cm; no RHS candidates provided	Not a plant, likely a product or tool.
+ACER palmatum 'Asahi-zuru'	58723	58723	true	true	true	plant	plant	Japanese maple cultivar matches RHS 58723 exactly	Matches 'Acer palmatum 'Asahi-zuru' (P/v)' in RHS record 58723.
+CHAMAECYPARIS lawsoniana Columnaris	98378	98378	true	true	true	plant	plant	Exact species and cultivar match (duplicate)	Matches 'Chamaecyparis lawsoniana 'Columnaris' in RHS record 98378.
+Builder Gloves Green Grip Lrg 09/Large			true	false	false	tool	tool	Work gloves, not a plant	Not a plant, identified as a tool.
+Phillyrea angustifolia Green Up	44115	44115	true	true	true	plant	plant	Species matches (rosemary-leaved type); cultivar not confirmed in RHS record	Matches 'Phillyrea angustifolia f. rosmarinifolia' in RHS record 44115.
+Alcea rosea plena 'Chater's Double' purple	42964	240228	false	true	true	plant	plant	Alcea rosea 'Chater's Double Group' at RHS ID 42964. Purple color specified; RHS record is cultivar group, not color sel	Matches 'Alcea rosea Chater's Double Group purple-flowered (d)' in RHS record 240228.
+DE WIT V Shaped Transplanting Spade T-handle			true	false	false	tool	tool	Garden tool (transplanting spade) - not a plant	Not a plant, identified as a tool.
+MALUS dom. James Grieve Half Standard Coronet	74563		false	true	true	plant	plant	Exact species and cultivar match	No RHS record matches 'James Grieve Half Standard Coronet' at the species level.
+Pittosporum tenuifolium 'Golden Ball'	370201	370201	true	true	true	plant	plant	Exact species and cultivar match in shortlist	Matches 'Pittosporum tenuifolium 'Golden Ball' exactly.
+Lagerstroemia indica Muskogee	100448		false	true	true	plant	plant	Lagerstroemia indica species matched to RHS ID 100448 but Muskogee cultivar not confirmed in shortlist	No RHS record matches 'Muskogee' at the species level.
+GROSURE Multi Purpose Lawn Seed 10m2 + 30% Extra Free Box ROI			true	false	false	seed	seed	Lawn seed product (grass seed mix), not a plant specimen	Product is a seed product, not a plant.
+Onion Spring White Lisbon Winter Hardy			true	true	false	plant	seed	Allium species recognized but this cultivar variant not in shortlist	Product is a seed product, not a plant.
+Wisteria sinensis 'Prolific'	84032	155303	false	true	true	plant	plant	Exact RHS record for Chinese wisteria 'Prolific'	Matches 'Wisteria sinensis 'Prolific' exactly.
+GT Ratchet Tensioner 1 for GTR002			true	false	false	tool	tool	Hardware tool, not a botanical product	Product is a tool, not a plant.
+red line marking paint			true	false	false	accessory	other	Marking paint product, not a plant	Product is not a plant or related to plants.
+ACER pal. Nicholsonii 150-	54021	54021	true	true	true	plant	plant	Exact match: Japanese maple 'Nicholsonii' (Acer palmatum)	Matches 'Acer palmatum 'Nicholsonii' exactly.
+ILEX aquifolium Nellie R. Stevens	67889	254045	false	true	true	plant	plant	Matches candidate 67889 (holly 'Nellie R. Stevens') confirmed by synonyms	Matches 'Ilex myrtifolia 'Nellie R. Stevens' exactly.
+Campanula lactiflora Loddon Anna	97388	28706	false	true	true	plant	plant	Exact species and cultivar match: RHS 97388	Matches Campanula persicifolia 'Loddon Anna' (ID 28706) with high confidence due to the cultivar name and species alignm
+Photinia × fraseri Pink Marble Standard Pleached	257506	257506	true	true	true	plant	plant	Standard pleached form of Pink Marble	Matches Photinia × fraseri Pink Marble ('Cassini') (ID 257506) with high confidence due to the cultivar name and species
+GS Winter Tree Wash			true	false	false	accessory	other	Plant care/pest control product — not a plant	Not a plant. Likely a product or chemical.
+RESOLVA Xtra Fast Weedkiller RTU			true	false	false	tool	other	Weedkiller product	Not a plant. Likely a product or chemical.
+Syringa meyeri Flowerfesta Pink	370664	370664	true	true	true	plant	plant	Exact match to Korean lilac [Flowerfesta Pink]	Matches Syringa meyeri Flowerfesta Pink ('Anny200817'PBR) (ID 370664) with high confidence due to the cultivar name and 
+ELAEAGNUS x ebbingei 200- 200/+ Solitaire	169093		false	true	true	plant	plant	Species match: Elaeagnus x ebbingei; no cultivar specified	No exact match found in RHS records for this cultivar name.
+SEMPONIUM Sienna		388812	false	true	true	plant	plant	Semponium is a plant genus in shortlist but Sienna cultivar not found; genus only recorded as × Semponium	Matches × Semponium 'Vortex' (ID 388812) with moderate confidence due to the genus and cultivar name similarity.
+CHAMAECYPARIS obtusa Nana Gracilis	98224	98224	true	true	true	plant	plant	Exact species and cultivar match; different size grade	Matches Chamaecyparis obtusa 'Nana Gracilis' (ID 98224) with high confidence due to the cultivar name and species alignm
+PHOTINIA x fraseri Red Robin (G)10/12 Standard Pleached H120xW120cm Stem	94829	94830	false	true	true	plant	plant	Photinia × fraseri 'Red Robin' exact match with RHS ID 94829	Matches Photinia × fraseri 'Robusta' (ID 94830) with high confidence due to the cultivar name and species alignment.
+CARPINUS bet. Frans Fontaine (G)14/16 Standard	91769	91769	true	true	true	plant	plant	Carpinus betulus with Frans Fontaine cultivar matches RHS record 91769	Matches Carpinus betulus 'Frans Fontaine' (ID 91769) with high confidence due to the cultivar name and species alignment
+Geranium cantabrigiense 'St Ola'		120692	false	true	true	plant	plant	Geranium genus confirmed, but species cantabrigiense and cultivar 'St Ola' not found in RHS shortlist	Exact match with RHS ID 120692, which corresponds to 'Geranium × cantabrigiense 'St Ola'.
+RAILWAY SLEEPERS NEW Spruce 2.4 meters			true	false	false	tool	tool	Spruce lumber product, not a plant; building/landscaping material	Not a plant. 'Railway sleepers' are tools or garden structures, not plants.
+ACER pal. Bloodgood 100-	90785	90785	true	true	true	plant	plant	Exact match: Acer palmatum 'Bloodgood' found in RHS candidates	Exact match with RHS ID 90785, which corresponds to 'Acer palmatum 'Bloodgood'.
+ILEX aqui. Nellie R.Stevens (G)18/20 Standard	154442	154442	true	true	true	plant	plant	Ilex aquifolium 'Nellie R. Stevens' exact match.	Exact match with RHS ID 154442, which corresponds to 'Ilex aquifolium 'Nellie Stevens'.
+TAXUS baccata 90- Low Ball Dome	18001	18001	true	true	true	plant	plant	Taxus baccata (common yew) matched to RHS candidate	Matches RHS ID 18001, which corresponds to 'Taxus baccata' (common yew), but the cultivar 'Low Ball Dome' is not listed 
+Aquado D23. H32cm			true	false	false	pot	pot	Ceramic pot/planter	Not a plant. 'Aquado' appears to be a pot or container, not a plant.
+PRUNUS laurocerasus (G)14/16 Pleached H120xW120cm Stem	13977	42827	false	true	true	plant	plant	Prunus laurocerasus matches RHS entry for cherry laurel; no cultivar specified in product	Exact match with RHS ID 42827, which corresponds to 'Prunus laurocerasus 'Castlewellan' (v)'.
+Vaso Egg D28. H26cm Et. White Garden			true	false	false	pot	pot	Garden planter pot with dimensions and finish	Not a plant. 'Vaso Egg' appears to be a pot or container, not a plant.
+Taxus baccata Summergold	72228	72228	true	true	true	plant	plant	Taxus baccata 'Summergold' matches exactly.	Exact match with RHS ID 72228, which corresponds to 'Taxus baccata 'Summergold' (v)'.
+Prunus avium 'Early Rivers'	56116	56116	true	true	true	plant	plant	RHS 56116 cherry (sweet) 'Early Rivers' is exact match.	Exact match with RHS ID 56116, which corresponds to 'Prunus avium 'Early Rivers' (F)'.
+super lawn broadcast spreader			true	false	false	tool	tool	Mechanical spreader tool for lawn application	Not a plant, it is a tool.
+Prunus serrulata Royal Burgundy	273956	273956	true	true	true	plant	plant	Exact match: Prunus serrulata 'Royal Burgundy' found in shortlist.	Matches 'Prunus serrulata 'Burgundy' (rhs_id 273956) at the species level with cultivar 'Royal Burgundy'.
+ACER freemanii Jeffersred Half Standard	66660	66660	true	true	true	plant	plant	Match: Acer × freemanii 'Jeffersred' found in RHS synonyms	Matches 'Acer × freemanii Autumn Blaze ('Jeffersred')' (rhs_id 66660) at the species level with cultivar 'Jeffersred'.
+Laurus nobilis	9876	9876	true	true	true	plant	plant	Exact match to RHS ID 9876 (bay tree)	Matches 'Laurus nobilis' (rhs_id 9876) at the species level.
+Carpinus betulus Pendula	89775	89775	true	true	true	plant	plant	Exact match to RHS record	Matches 'Carpinus betulus 'Pendula' (rhs_id 89775) at the species level with cultivar 'Pendula'.
+Pittosporum tenuifolium 'County Park Dwarf'			true	true	true	plant	plant	Genus and species match Pittosporum tenuifolium but cultivar 'County Park Dwarf' not found in provided RHS candidates	No exact match found in RHS records for 'Pittosporum tenuifolium 'County Park Dwarf'.
+WISTERIA flor. Longissima Alba 150/+ cm	104543	155350	false	true	true	plant	plant	Exact match: Wisteria floribunda 'Longissima Alba' found in RHS synonyms	Matches 'Wisteria floribunda 'Longissima' (rhs_id 155350) at the species level with cultivar 'Longissima Alba'.
+Melbourne 4-01SA D34cm H46cm Sea Green			true	false	false	pot	pot	Pot container model Melbourne with diameter and height specifications	Not a plant, it is a pot.
+WESTLAND Spreader for Life SafeLawn 80m2			true	false	false	tool	tool	Garden tool, not a plant	Not a plant, it is a tool.
+Festuca cinerea 'Eisvogel' MiniRooter			true	true	true	seed	plant	Festuca cinerea species not found in RHS shortlist	No exact match found in RHS records for 'Festuca cinerea 'Eisvogel'.

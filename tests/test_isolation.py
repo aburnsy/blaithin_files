@@ -14,9 +14,11 @@ def test_overrides_path_redirected_to_tmp(tmp_path):
 
 
 def test_audit_dir_redirected_to_tmp(tmp_path):
-    from src.matching.run import AUDIT_DIR
+    from src.matching.overrides import _audit_dir
 
-    assert AUDIT_DIR == tmp_path / "llm_audit"
+    # _audit_dir derives from OVERRIDES_PARQUET.parent, which the conftest
+    # autouse fixture has redirected to tmp_path.
+    assert _audit_dir() == tmp_path / "llm_audit"
 
 
 def test_log_dir_redirected_to_tmp(tmp_path):
