@@ -1,12 +1,19 @@
 """Integration test: deterministic match pipeline against the fixture."""
 
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import patch
 
 import polars as pl
 import pytest
 
-from src.matching.run import run_matching, run_with_llm_fallback
+from src.matching.models import MatchOverride
+from src.matching.run import (
+    _augment_with_parent_species,
+    _species_level_index_by_genus,
+    run_matching,
+    run_with_llm_fallback,
+)
 
 RHS_FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "rhs_sample.parquet"
 
@@ -84,3 +91,82 @@ def test_llm_fallback_persists_overrides(mock_invoke, rhs_df, products_df, tmp_p
     assert len(lines) == products_df.height
     parsed = [json.loads(line) for line in lines]
     assert all(p["source"] == "llm" for p in parsed)
+
+
+def test_species_level_index_picks_only_bare_binomials(rhs_df):
+    """Species-level index must exclude cultivar/parenthetical/subspecies rows."""
+    idx = _species_level_index_by_genus(rhs_df)
+    # Every collected rhs_id must point to a botanical_name of the shape
+    # "Genus species" (two tokens, no quote, no paren).
+    flat_ids = {rid for ids in idx.values() for rid in ids}
+    rows = rhs_df.filter(pl.col("rhs_id").is_in(list(flat_ids)))
+    names = rows.select("botanical_name").to_series().to_list()
+    for n in names:
+        assert "'" not in n, f"cultivar leaked into species-level index: {n}"
+        assert "(" not in n, f"parenthetical leaked into species-level index: {n}"
+        assert len(n.split(" ")) == 2, f"non-binomial leaked into species-level index: {n}"
+
+
+def test_augment_with_parent_species_prepends_parent(rhs_df):
+    """Each query gets its parsed genus's species-level rhs_ids merged in at the front."""
+    # Pick a genus that has a bare-binomial record in the fixture.
+    idx = _species_level_index_by_genus(rhs_df)
+    genus = next(iter(idx))
+    parent_id = idx[genus][0]
+
+    unmatched = pl.DataFrame({
+        "product_name_clean": [f"{genus} fakecultivar"],
+        "genus": [genus],
+    })
+    augmented = _augment_with_parent_species(
+        candidates_per_name={f"{genus.lower()} fakecultivar": [999_999]},
+        unmatched=unmatched,
+        rhs_df=rhs_df,
+        cap=15,
+    )
+    merged = augmented[f"{genus.lower()} fakecultivar"]
+    assert parent_id in merged, "parent species rhs_id missing from augmented shortlist"
+    assert merged.index(parent_id) < merged.index(999_999), (
+        "parent species should come before fuzzy hits"
+    )
+
+
+def test_override_application_preserves_parsed_genus_species(rhs_df):
+    """An override hit must still populate gnparser-derived genus/species/cultivar."""
+    # Build an override for a known fixture plant. Pick the first species-level
+    # rhs_id from the fixture so we have a known target.
+    first_plant = rhs_df.filter(
+        ~pl.col("botanical_name").str.contains("'")
+        & (pl.col("botanical_name").str.split(" ").list.len() == 2)
+    ).head(1).to_dicts()[0]
+    botanical_name = first_plant["botanical_name"]
+
+    # Add a product row that this override should hit.
+    one_product = pl.DataFrame({
+        "source": ["test_nursery"],
+        "product_url": ["https://example.com/o"],
+        "product_name_raw": [f"{botanical_name} 'NewCultivar' 50cm"],
+        "price_native": [12.5],
+        "currency": ["EUR"],
+    })
+
+    from src.matching.normalize import clean_product_name
+    override = MatchOverride(
+        product_name_clean=clean_product_name(f"{botanical_name} 'NewCultivar' 50cm"),
+        rhs_id=first_plant["rhs_id"],
+        cultivar="NewCultivar",
+        is_plant=True,
+        product_category="plant",
+        source="llm",
+        model="test-model",
+        created_at=datetime.now(UTC),
+        notes="test",
+    )
+
+    matched = run_matching(one_product, rhs_df, overrides=[override])
+    row = matched.to_dicts()[0]
+    expected_genus = botanical_name.split(" ")[0]
+    expected_species = botanical_name.split(" ")[1]
+    assert row["genus"] == expected_genus, f"genus nuked on override apply: {row}"
+    assert row["species"] == expected_species, f"species nuked on override apply: {row}"
+    assert row["rhs_id"] == first_plant["rhs_id"]

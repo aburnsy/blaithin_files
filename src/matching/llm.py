@@ -40,10 +40,26 @@ SYSTEM_INSTRUCTIONS = (
     '"is_plant": bool, "product_category": one of '
     '"plant"|"bulb"|"seed"|"compost"|"soil"|"tool"|"pot"|"fertiliser"|"accessory"|"other", '
     '"confidence": float in [0,1], "reasoning": str}\n'
-    "Pick rhs_id ONLY from the provided shortlist. If none of the shortlisted "
-    "records matches at the species level, set rhs_id=null. If the product is "
-    "not a plant, set is_plant=false and pick the right category. If a plant "
-    "has a cultivar in quotes, extract it."
+    "Pick rhs_id ONLY from the provided shortlist, using this priority:\n"
+    "  (1) Exact cultivar match — shortlist has the cultivar (e.g. "
+    "\"Dianthus 'Peach Party'\" for product \"Dianthus 'Peach Party'\"). "
+    "Set confidence=0.95.\n"
+    "  (2) Parent-species fallback — shortlist has the bare species record "
+    "(e.g. \"Dianthus caryophyllus\") and the product is that species with an "
+    "unrecognised cultivar (e.g. \"Dianthus caryophyllus 'I Love U'\"). Pick "
+    "the species rhs_id and keep the cultivar string in the cultivar field. "
+    "Set confidence=0.75.\n"
+    "  (3) Genus-level fallback — no parent species is listed but the "
+    "shortlist has at least one same-genus record. Pick the most "
+    "horticulturally common species in that genus from the shortlist (e.g. "
+    "\"Ilex aquifolium\" for an unrecognised Ilex cultivar). Keep the "
+    "cultivar in the cultivar field. Set confidence=0.5.\n"
+    "Only set rhs_id=null if the product is not a plant, or no shortlist "
+    "record shares the product's genus. A null rhs_id on a plant makes the "
+    "product invisible in the UI — avoid it whenever ANY same-genus record "
+    "is in the shortlist.\n"
+    "If the product is not a plant, set is_plant=false and pick the right "
+    "category. If a plant has a cultivar in quotes, extract it."
 )
 
 

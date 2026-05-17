@@ -115,3 +115,41 @@ def test_clean_is_idempotent():
     once = clean_product_name(sample)
     twice = clean_product_name(once)
     assert once == twice
+
+
+def test_clean_strips_compound_dimension_tokens():
+    # Letter-prefixed compound dimensions ("h120xw120cm") were leaking through
+    # because \b\d+ requires a word boundary before the digit, which a leading
+    # letter doesn't provide. All four of these collapse to the same plant.
+    canonical = "Ilex aquifolium nellie r.stevens"
+    assert clean_product_name("Ilex aquifolium Nellie R.Stevens H120xW120cm") == canonical
+    assert clean_product_name("Ilex aquifolium Nellie R.Stevens 80cm") == canonical
+    assert clean_product_name("Ilex aquifolium Nellie R.Stevens 100+cm") == canonical
+    assert clean_product_name("Ilex aquifolium Nellie R.Stevens Cone") == canonical
+    # Variants on the same dimension shape
+    assert clean_product_name("Prunus lusitanica Angustifolia D20+cm") == "Prunus lusitanica angustifolia"
+    assert clean_product_name("Prunus lusitanica Angustifolia D30cm+") == "Prunus lusitanica angustifolia"
+
+
+def test_clean_strips_trailing_single_letter_size_token():
+    # Nurseries tack on " T" (topiary), " P", etc. on the end of names.
+    assert clean_product_name("Aster frikartii Monch T") == "Aster frikartii monch"
+    assert clean_product_name("Diosma ericoides Pink Fountain T") == "Diosma ericoides pink fountain"
+
+
+def test_clean_strips_stray_plus_sign():
+    assert clean_product_name("Ilex mes. Blue Maid +") == "Ilex mes. blue maid"
+
+
+def test_clean_strips_topiary_shape_descriptors():
+    # Cone/spiral/pyramid/column are form descriptors like Pompon — they should
+    # be dropped so a 'Cone' variant doesn't fork the cache key.
+    assert clean_product_name("Buxus sempervirens Spiral") == "Buxus sempervirens"
+    assert clean_product_name("Taxus baccata Pyramid") == "Taxus baccata"
+    assert clean_product_name("Buxus sempervirens Column") == "Buxus sempervirens"
+
+
+def test_clean_does_not_strip_unit_inside_word():
+    # The leftover-unit pattern must not eat 'cm' from inside a real word like
+    # 'Carolina' — assert genus + species both survive intact.
+    assert clean_product_name("Carolina rosea") == "Carolina rosea"

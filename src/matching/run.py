@@ -30,6 +30,96 @@ _PROGRESS_EVERY = 5_000
 log = get_logger("matching.run")
 
 
+def _species_level_index_by_genus(rhs_df: pl.DataFrame) -> dict[str, list[int]]:
+    """Return ``{genus: [rhs_id, ...]}`` for species-level records only.
+
+    "Species-level" = botanical_name has the shape ``"Genus species"`` (no
+    single quote, no parenthetical, no subspecies/forma rank). These are the
+    parent-species records the LLM should fall back to when a specific cultivar
+    isn't catalogued.
+
+    Older RHS parquets don't carry separate ``genus``/``species`` columns — in
+    that case we derive the genus by splitting ``botanical_name`` on its first
+    space, which is exactly the same heuristic the production parquet was built
+    from.
+    """
+    id_col = "rhs_id" if "rhs_id" in rhs_df.columns else "id"
+
+    df = rhs_df
+    if "genus" not in df.columns:
+        df = df.with_columns(
+            pl.col("botanical_name").str.split(" ").list.get(0).alias("genus")
+        )
+
+    df = df.filter(
+        pl.col("genus").is_not_null()
+        & pl.col("botanical_name").is_not_null()
+        & ~pl.col("botanical_name").str.contains("'")
+        & ~pl.col("botanical_name").str.contains(r"\(")
+        & (pl.col("botanical_name").str.split(" ").list.len() == 2)
+    )
+
+    return {
+        row["genus"]: list(row["rhs_ids"])
+        for row in df.group_by("genus")
+        .agg(pl.col(id_col).alias("rhs_ids"))
+        .iter_rows(named=True)
+    }
+
+
+def _augment_with_parent_species(
+    *,
+    candidates_per_name: dict[str, list[int]],
+    unmatched: pl.DataFrame,
+    rhs_df: pl.DataFrame,
+    cap: int,
+) -> dict[str, list[int]]:
+    """Merge species-level RHS rhs_ids (by parsed genus) into each query's shortlist.
+
+    The fuzzy shortlist is built from string similarity, which can miss the
+    obvious parent species record (a "Dianthus 'I Love U'" query doesn't
+    fuzzy-match "Dianthus caryophyllus" closely enough to surface it). This
+    augmentation closes that gap so the LLM has the option to fall back to a
+    species-level rhs_id instead of returning null.
+
+    Parent-species ids are prepended (before the fuzzy hits) so they're the
+    first thing the LLM sees; per-query list is capped at ``cap`` to keep
+    prompt size bounded.
+    """
+
+    if "genus" not in unmatched.columns:
+        return candidates_per_name
+
+    species_by_genus = _species_level_index_by_genus(rhs_df)
+    if not species_by_genus:
+        return candidates_per_name
+
+    genus_per_name: dict[str, str] = {}
+    for row in unmatched.select("product_name_clean", "genus").iter_rows(named=True):
+        genus = row["genus"]
+        if genus:
+            genus_per_name[row["product_name_clean"].lower()] = genus
+
+    augmented = dict(candidates_per_name)
+    for name_lower, genus in genus_per_name.items():
+        existing = augmented.get(name_lower, [])
+        parents = species_by_genus.get(genus, [])
+        if not parents and not existing:
+            continue
+        merged: list[int] = []
+        seen: set[int] = set()
+        for rid in list(parents) + list(existing):  # parents first
+            if rid in seen:
+                continue
+            seen.add(rid)
+            merged.append(rid)
+            if len(merged) >= cap:
+                break
+        augmented[name_lower] = merged
+
+    return augmented
+
+
 def run_matching(
     products_df: pl.DataFrame,
     rhs_df: pl.DataFrame,
@@ -67,20 +157,27 @@ def run_matching(
         raw = row["product_name_raw"]
         clean = clean_product_name(raw)
 
-        # Step 0: override cache wins
+        # Step 0: override cache wins. Even on a hit, run the parser so the
+        # gnparser-derived genus/species/cultivar_group columns get populated —
+        # otherwise an LLM override with rhs_id=null leaves those fields blank
+        # and the row falls out of any genus-grouped UI view.
         if (override := overrides_by_clean.get(clean)) is not None:
+            try:
+                parsed_override = parse(clean)
+            except ParseFailed:
+                parsed_override = None
             out_rows.append({
                 **row,
                 "product_name_clean": clean,
                 "rhs_id": override.rhs_id,
-                "cultivar": override.cultivar,
+                "cultivar": override.cultivar or (parsed_override.cultivar if parsed_override else None),
                 "match_method": "manual_override" if override.source == "manual" else "llm",
                 "match_confidence": 1.0 if override.source == "manual" else 0.95,
                 "is_plant": override.is_plant,
                 "product_category": override.product_category,
-                "genus": None,
-                "species": None,
-                "cultivar_group": None,
+                "genus": parsed_override.genus if parsed_override else None,
+                "species": parsed_override.species if parsed_override else None,
+                "cultivar_group": parsed_override.cultivar_group if parsed_override else None,
             })
         else:
             try:
@@ -251,6 +348,19 @@ def run_with_llm_fallback(
         k=LLM_CANDIDATE_K,
         threshold=LLM_CANDIDATE_THRESHOLD,
     )
+
+    # Augment each query's shortlist with the species-level RHS records for its
+    # parsed genus. Without this, "Dianthus 'Early Love'" never sees
+    # "Dianthus caryophyllus" in the shortlist (fuzzy match doesn't pick it up
+    # — the cultivar string drowns out the genus). With it, the LLM has a
+    # parent-species record to fall back to instead of returning rhs_id=null.
+    candidates_per_name = _augment_with_parent_species(
+        candidates_per_name=candidates_per_name,
+        unmatched=unmatched,
+        rhs_df=rhs_df,
+        cap=LLM_CANDIDATE_K + 5,
+    )
+
     needed_ids: set[int] = set()
     for ids in candidates_per_name.values():
         needed_ids.update(ids)

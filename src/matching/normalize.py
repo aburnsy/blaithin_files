@@ -29,6 +29,16 @@ import unicodedata
 # Multi-word descriptors must come before their single-word variants so the
 # longer match wins (e.g. "Half Standard" before "Standard").
 _PATTERNS = [
+    # Compound dimension tokens like "h120xw120cm", "W90/H120", "d20+cm".
+    # The leading letter breaks the \b\d+ rule (no word boundary between a
+    # letter and digit), so we have to spell these out explicitly. Run BEFORE
+    # the plain `\b\d+ cm` pattern so the units don't leak through as
+    # standalone "cm" tokens.
+    re.compile(
+        r"\b[hHwWdD]\d+\s*[x×/]\s*[hHwWdD]?\d+\s*(?:cm|mm|m)?\b",
+        re.IGNORECASE,
+    ),
+    re.compile(r"\b[hHwWdD]\d+\+?\s*(?:cm|mm|m)?\b", re.IGNORECASE),
     re.compile(r"\b\d+\s*(?:cm|mm|m)\b", re.IGNORECASE),                # heights/widths
     re.compile(r"\b\d+\s*(?:l|ltr|litre|liter)\b", re.IGNORECASE),      # pot volumes
     re.compile(r"\bP\d+\b", re.IGNORECASE),                             # pot codes (P9, P15)
@@ -45,6 +55,7 @@ _PATTERNS = [
         r"[13]/[24]\s+Standard(?:\s+Stem)?|"
         r"Pompon\s+Ball|"
         r"Pom\s*Pom|"
+        r"Ball[-\s]on[-\s]Stem|"
         r"Old\s+Skin|Young\s+Skin|Old\s+Bark|Young\s+Bark|Old\s+Logs|"
         r"Pleached(?:\s+Panel)?|"
         r"Forma\s+[A-Z][a-z]+|"
@@ -58,6 +69,7 @@ _PATTERNS = [
     re.compile(
         r"\b(?:Standard|Stem|Crown|Bush|Ball|Bonsai|Pompon|Branched|"
         r"Bowl|Extra|Tarrina|Specimen|Topiary|Espalier|Cordon|"
+        r"Cone|Spiral|Pyramid|Column|Columnar|Bun|Onion|"
         r"Tree|Mature|Girth|Hedge|Hedging|Container|Cont|"
         r"Rootball|Mini|Double|Single|Plant|Plants)\b",
         re.IGNORECASE,
@@ -71,12 +83,23 @@ _PATTERNS = [
     # "10/12", "40+", trailing "100".
     re.compile(r"\b\d+\s*[-+/](?:\s*\d+)?(?!\d)"),
     re.compile(r"\b\d+\+?\b"),
+    # Leftover unit dangles: a previous strip consumed the digit but left
+    # "cm"/"mm"/"l"/"ltr" floating (e.g. "Foo 100+cm" -> "Foo cm"). These have
+    # to be matched without a preceding word-char so we don't eat the "cm" out
+    # of a real cultivar like "Carolina".
+    re.compile(r"(?<![A-Za-z])(?:cm|mm|ltr|litre|liter)\b", re.IGNORECASE),
+    # Stray "+" between words after digit stripping ("Blue Maid +").
+    re.compile(r"(?<=\s)\+(?=\s|$)"),
     # Strip everything from the first remaining "/" to end (after numeric
     # ranges have been consumed above, a leftover slash is a common-name
     # suffix like "/ Olive Tree girth").
     re.compile(r"\s*/.*$"),
     # Empty leftover parens like "( )" after inner stripping.
     re.compile(r"\(\s*\)"),
+    # Trailing single-letter size/form tokens at the end of the name: nurseries
+    # tack on " T" (topiary), " P" (potted), " B" (bare-root), " S" (small).
+    # Anchor to end-of-string so we don't damage genuine cultivar fragments.
+    re.compile(r"\s+[tpbs]\s*$", re.IGNORECASE),
 ]
 
 _WHITESPACE = re.compile(r"\s+")
